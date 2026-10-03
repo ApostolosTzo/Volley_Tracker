@@ -1,0 +1,16 @@
+{
+  "name": "volley-tracker",
+  "version": "1.0.0",
+  "description": "Στατιστικά αγώνα βόλι — χτυπήματα, υποδοχές, πάσες, σερβίς. PWA στα ελληνικά, offline.",
+  "private": true,
+  "scripts": {
+    "start": "http-server -p 8080 -c-1 .",
+    "dev": "http-server -p 8080 -c-1 . -o",
+    "icons": "powershell -ExecutionPolicy Bypass -File tools/make-icons.ps1"
+  },
+  "keywords": ["volleyball", "stats", "pwa", "sports"],
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
