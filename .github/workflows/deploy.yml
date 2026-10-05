@@ -27,6 +27,10 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          # Ενεργοποιεί τα Pages μόνο του αν δεν είναι ήδη ενεργά
+          # (αλλιώς απαιτεί χειροκίνητη ενεργοποίηση στα Settings)
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
