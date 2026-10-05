@@ -36,7 +36,7 @@
   var ATTACK_RESULTS = {
     tip: [
       { id: 'point', label: 'Point', emoji: '\uD83C\uDFAF', tone: 'good' },
-      { id: 'saved', label: 'Σώθηκε', emoji: '\uD83D\uDEE1', tone: 'neutral' },
+      { id: 'saved', label: 'Saved', emoji: '\uD83D\uDEE1', tone: 'neutral' },
       { id: 'blocked', label: 'Blocked', emoji: '\uD83D\uDEA8', tone: 'bad' },
       { id: 'out', label: 'Out / Net', emoji: '\u274C', tone: 'bad' }
     ],
@@ -49,19 +49,21 @@
   };
 
   /* ---------- ΥΠΟΔΟΧΕΣ ---------- */
+  /* χωρίς emoji — μόνο το κείμενο */
   var RECEPTION_RESULTS = [
-    { id: 'good', label: 'Point', emoji: '\uD83C\uDFAF', tone: 'good', help: 'Δικός μας πόντος μετά την υποδοχή' },
-    { id: 'ace', label: 'Ace', emoji: '\uD83D\uDCA5', tone: 'bad', help: 'Χάσαμε πόντο, αντίπαθος πόντος' },
-    { id: 'error', label: 'Λάθος', emoji: '\u274C', tone: 'bad', help: 'Δικό μας λάθος στην υποδοχή' },
-    { id: 'poor', label: 'Ασθενές', emoji: '\uD83D\uDC1E', tone: 'neutral', help: 'Η ομάδα σώθηκε μετά την υποδοχή' }
+    { id: 'good', label: 'Point', tone: 'good', help: 'Δικός μας πόντος μετά την υποδοχή' },
+    { id: 'ace', label: 'Ace', tone: 'bad', help: 'Χάσαμε πόντο, αντίπαθος πόντος' },
+    { id: 'error', label: 'Λάθος', tone: 'bad', help: 'Δικό μας λάθος στην υποδοχή' },
+    { id: 'poor', label: 'Ασθενές', tone: 'neutral', help: 'Η ομάδα σώθηκε μετά την υποδοχή' }
   ];
 
   /* Τύπος υποδοχής = πόσοι μπλόκερ έχουν ανέβει ψηλά,
      άρα σε ποιον επιθέτη μπορεί να πάει η πάσα */
   var RECEPTION_TARGETS = [
-    { id: '1', label: '1', hint: 'Μόνο OH', sub: 'OH' },
-    { id: '2', label: '2', hint: 'OH ή OPP', sub: 'OH · OPP' },
-    { id: '3', label: '3', hint: 'OH, OPP, MB', sub: 'OH · OPP · MB' }
+    { id: '0', label: '0', sub: null, hint: 'Κανένας μπλόκερ ψηλά' },
+    { id: '1', label: '1', sub: 'OH', hint: 'Μόνο OH' },
+    { id: '2', label: '2', sub: 'OH-OPP', hint: 'OH ή OPP' },
+    { id: '3', label: '3', sub: 'OH-OPP-MB', hint: 'OH, OPP, MB' }
   ];
 
   /* ---------- ΠΑΣΕΣ (πάσες παίκτη σερβίς) ---------- */
@@ -88,10 +90,9 @@
   ];
 
   var SERVE_RESULTS = [
-    { id: 'ace', label: 'Ace', emoji: '\uD83D\uDCA5', tone: 'good' },
-    { id: 'point', label: 'Point', emoji: '\uD83C\uDFAF', tone: 'good' },
-    { id: 'out', label: 'Out', emoji: '\u274C', tone: 'bad' },
-    { id: 'easy', label: 'Πιάστηκε', emoji: '\uD83D\uDEE1', tone: 'bad', help: 'Πολύ εύκολο για τους' }
+    { id: 'ace', label: 'Ace', emoji: '\uD83D\uDCA5', tone: 'good', help: 'Ο πόντος μας' },
+    { id: 'out', label: 'Out', emoji: '\u274C', tone: 'bad', help: 'Πόντος τους' },
+    { id: 'easy', label: 'Σώθηκε', emoji: '\uD83D\uDEE1', tone: 'neutral', help: 'Δεν έγινε πόντος, διάσωσαν το σερβίς' }
   ];
 
   /* Ζώνη σερβίς (προαιρετικό) */

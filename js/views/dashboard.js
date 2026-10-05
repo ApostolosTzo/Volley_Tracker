@@ -112,21 +112,21 @@
 
     var body = el('div', {}, [
       CH.statCards([
-        { value: String(s.good), label: 'Καλές', accent: 'good' },
-        { value: String(s.ace), label: 'Aces', accent: 'bad' },
-        { value: String(s.error), label: 'Λάθη', accent: 'bad' },
-        { value: V.Stats.fmtPct(s.good, s.total), label: 'Ποσοστό', hint: 'ποιοστό υποδοχής' }
+        { value: String(s.total), label: 'Υποδοχές' },
+        { value: String(s.targets.filter(function (t) { return t.id === '0'; })[0].value), label: 'Τύπος 0' },
+        { value: String(s.players.length), label: 'Παίκτες' }
       ]),
-      el('h3', { class: 'sub', text: 'Ποιος υπέδεξε και πόσες καλές' }),
+      el('h3', { class: 'sub', text: 'Ποιος υπέδεξε και πόσες' }),
       CH.bars(s.players.map(function (p) {
         return {
-          label: String(p.good), name: p.name, value: p.good, tone: 'good',
-          sub: p.total + ' συνολικά · ' + p.ace + ' ace · ' + p.error + ' λάθη · ' + p.poor + ' ασθενές'
+          label: String(p.total), name: p.name, value: p.total, tone: 'default',
+          sub: C.RECEPTION_TARGETS.filter(function (t) { return (p.byTarget[t.id] || 0) > 0; })
+            .map(function (t) { return t.label + '×' + p.byTarget[t.id]; }).join(' · ')
         };
       }), { hideEmpty: true }),
-      el('h3', { class: 'sub', text: 'Πόσοι τύποι υποδοχής (1 / 2 / 3)' }),
+      el('h3', { class: 'sub', text: 'Πόσοι τύποι υποδοχής (0 / 1 / 2 / 3)' }),
       CH.bars(s.targets.map(function (t) {
-        return { label: 'Τύπος ' + t.label + ' — ' + t.hint, value: t.value, tone: 'default' };
+        return { label: 'Τύπος ' + t.label, name: t.sub || '', value: t.value, tone: 'default' };
       })),
       el('h3', { class: 'sub', text: 'Τι έκανε κάθε παίκτης σε κάθε υποδοχή' }),
       el('div', { class: 'detail-list' }, s.players.map(function (p) {
@@ -138,31 +138,30 @@
 
   function playerReceptionDetail(p) {
     var rows = [];
+    /* τύποι υποδοχής — το βασικό */
+    C.RECEPTION_TARGETS.forEach(function (t) {
+      var n = p.byTarget[t.id] || 0;
+      if (!n) return;
+      rows.push({ label: 'Τύπος ' + t.label, name: t.sub || '', value: n, tone: 'default' });
+    });
+    /* αποτελέσματα — μόνο αν υπάρχουν (παλιές καταχωρήσεις) */
     C.RECEPTION_RESULTS.forEach(function (r) {
       var n = p.byResult[r.id] || 0;
       if (!n) return;
       rows.push({ label: r.label, value: n, tone: r.tone });
     });
-    C.RECEPTION_TARGETS.forEach(function (t) {
-      var n = p.byTarget[t.id] || 0;
-      if (!n) return;
-      rows.push({ label: 'Τύπος ' + t.label, name: t.sub || t.hint, value: n, tone: 'default' });
-    });
+
+    var meta = p.total + ' υποδοχές';
+    if (p.good || p.ace || p.error || p.poor) {
+      meta += ' · ' + V.Stats.fmtPct(p.goodPct, 100) + ' ποιοστό';
+    }
 
     return el('details', { class: 'detail' }, [
       el('summary', { class: 'detail__sum' }, [
         el('span', { class: 'detail__name', text: p.name }),
-        el('span', { class: 'detail__meta', text: p.total + ' υποδ. · ' + p.good + ' καλές · ' + V.Stats.fmtPct(p.goodPct, 100) })
+        el('span', { class: 'detail__meta', text: meta })
       ]),
-      el('div', { class: 'detail__body' }, [
-        CH.bars(rows, { dense: true }),
-        el('div', { class: 'tagrow' }, [
-          CH.chip('Point: ' + p.good, 'good'),
-          CH.chip('Ace: ' + p.ace, 'bad'),
-          CH.chip('Λάθος: ' + p.error, 'bad'),
-          CH.chip('Ασθενές: ' + p.poor, 'neutral')
-        ])
-      ])
+      el('div', { class: 'detail__body' }, [CH.bars(rows, { dense: true })])
     ]);
   }
 
@@ -212,11 +211,11 @@
         { value: V.Stats.fmtPct(s.aces, s.total), label: 'Ποσοστό ace' },
         { value: String(s.players.length), label: 'Σερβιέρ' }
       ]),
-      el('h3', { class: 'sub', text: 'Ποιος πέτυχε πόντο στο σερβίς' }),
+      el('h3', { class: 'sub', text: 'Ποιος πέτυχε ace' }),
       CH.bars(s.players.map(function (p) {
         return {
-          label: String(p.points), name: p.name, value: p.points, tone: 'good',
-          sub: p.total + ' σερβίς · ' + p.aces + ' ace · ' + p.out + ' out · ' + p.easy + ' πιάστηκε'
+          label: String(p.aces), name: p.name, value: p.aces, tone: 'good',
+          sub: p.total + ' σερβίς · ' + p.out + ' out · ' + p.saved + ' σώθηκε'
         };
       }), { hideEmpty: true }),
       el('h3', { class: 'sub', text: 'Τύπος σερβίς' }),
@@ -226,8 +225,7 @@
       el('h3', { class: 'sub', text: 'Τι έκανε κάθε σερβιέρ' }),
       el('div', { class: 'detail-list' }, s.players.map(function (p) {
         var rows = C.SERVE_RESULTS.map(function (r) {
-          var n = { ace: p.aces, point: p.points - p.aces, out: p.out, easy: p.easy }[r.id] || 0;
-          return { label: r.label, value: n, tone: r.tone };
+          return { label: r.label, value: (p.byResult && p.byResult[r.id]) || 0, tone: r.tone };
         }).filter(function (r) { return r.value; });
         rows.unshift({ label: 'Άλμα', value: p.jump, tone: 'default' });
         rows.push({ label: 'Float', value: p.float, tone: 'default' });
@@ -237,7 +235,14 @@
             el('span', { class: 'detail__name', text: p.name }),
             el('span', { class: 'detail__meta', text: p.total + ' σερβίς · ' + p.aces + ' ace · ' + V.Stats.fmtPct(p.acePct, 100) })
           ]),
-          el('div', { class: 'detail__body' }, [CH.bars(rows, { dense: true })])
+          el('div', { class: 'detail__body' }, [
+            CH.bars(rows, { dense: true }),
+            el('div', { class: 'tagrow' }, [
+              CH.chip('Ace: ' + p.aces, 'good'),
+              CH.chip('Out: ' + p.out, 'bad'),
+              CH.chip('Σώθηκε: ' + p.saved, 'neutral')
+            ])
+          ])
         ]);
       }))
     ]);
@@ -255,7 +260,7 @@
         { value: setsUs + '–' + setsThem, label: 'Σετ', accent: setsUs >= setsThem ? 'good' : 'bad' },
         { value: String(s.attacks.kills), label: 'Πόντοι από χτύπημα', accent: 'good' },
         { value: String(s.serves.aces), label: 'Aces', accent: 'good' },
-        { value: s.receptions.goodPct == null ? '—' : s.receptions.goodPct.toFixed(1) + '%', label: 'Υποδοχή' },
+        { value: String(s.receptions.total), label: 'Υποδοχές' },
         { value: s.passes.cleanPct == null ? '—' : s.passes.cleanPct.toFixed(1) + '%', label: 'Καθαρές πάσες' },
         { value: String(m.events.length), label: 'Καταχωρήσεις' }
       ]),
@@ -266,9 +271,10 @@
         s.serves.players[0] ? topLine('🎯 Καλύτερος σερβιέρ', s.serves.players[0].name,
           s.serves.players[0].aces + ' ace από ' + s.serves.players[0].total + ' σερβίς (' +
           V.Stats.fmtPct(s.serves.players[0].acePct, 100) + ')') : null,
-        s.receptions.players[0] ? topLine('🧱 Καλύτερος υποδοχέας', s.receptions.players[0].name,
-          V.Stats.fmtPct(s.receptions.players[0].goodPct, 100) + ' ποιοστό υποδοχής (' +
-          s.receptions.players[0].good + '/' + s.receptions.players[0].total + ')') : null,
+        s.receptions.players[0] ? topLine('🧱 Περισσότερες υποδοχές', s.receptions.players[0].name,
+          s.receptions.players[0].total + ' υποδοχές (' +
+          C.RECEPTION_TARGETS.filter(function (t) { return s.receptions.players[0].byTarget[t.id]; })
+            .map(function (t) { return t.label + '×' + s.receptions.players[0].byTarget[t.id]; }).join(', ') + ')') : null,
         s.passes.players[0] ? topLine('🤝 Περισσότερες πάσες', s.passes.players[0].name,
           s.passes.players[0].total + ' πάσες') : null
       ].filter(Boolean))
@@ -294,12 +300,12 @@
         { text: String(r.kills) },
         { text: r.killPct == null ? '—' : r.killPct.toFixed(1) + '%' },
         { text: String(r.receptions) },
-        { text: r.recPct == null ? '—' : r.recPct.toFixed(1) + '%' },
+        { text: String(r.recNoBlock) },
         { text: String(r.serves) },
         { text: String(r.aces) }
       ];
     });
-    var headers = ['Σετ', 'Σκορ', 'Χτυπ.', 'Ποντ.', '%', 'Υποδ.', '%', 'Σερβ.', 'Aces'].map(function (l, i) {
+    var headers = ['Σετ', 'Σκορ', 'Χτυπ.', 'Ποντ.', '%', 'Υποδ.', '0', 'Σερβ.', 'Aces'].map(function (l, i) {
       return { label: l, num: i > 0 };
     });
 
@@ -386,7 +392,8 @@ function renderTimeline(ctx) {
   function subFor(e) {
     var parts = ['Σετ ' + e.set];
     if (e.type === 'reception') {
-      parts.push('Τύπος ' + e.target);
+      var t = V.byId(C.RECEPTION_TARGETS, e.target);
+      if (t && t.sub) parts.push(t.sub);
     } else if (e.type === 'pass') {
       parts.push((e.issues && e.issues.length)
         ? e.issues.map(function (i) { return V.label.passIssue(i); }).join(' + ')
@@ -449,8 +456,7 @@ function renderTimeline(ctx) {
         b.addEventListener('click', function () { setTimeout(renderResults, 0); });
       });
     } else if (e.type === 'reception') {
-      body.appendChild(segRow('Αποτέλεσμα', C.RECEPTION_RESULTS.map(function (r) { return { id: r.id, label: r.label }; }), 'result'));
-      body.appendChild(segRow('Τύπος', C.RECEPTION_TARGETS.map(function (r) { return { id: r.id, label: r.label }; }), 'target'));
+      body.appendChild(segRow('Τύπος', C.RECEPTION_TARGETS.map(function (r) { return { id: r.id, label: r.label + ' · ' + r.sub }; }), 'target'));
     } else if (e.type === 'pass') {
       body.appendChild(segRow('Σε ποιον', C.PASS_TARGETS.map(function (r) { return { id: r.id, label: r.label }; }), 'target'));
       var issues = (draft.issues || []).slice();

@@ -71,11 +71,14 @@
   /* ---------------- segmented sticky control ---------------- */
   function segmented(label, items, value, onPick, opts) {
     opts = opts || {};
-    return el('div', { class: 'sticky' + (opts.wide ? ' sticky--wide' : '') }, [
+    return el('div', {
+      class: 'sticky' + (opts.wide ? ' sticky--wide' : '') + (opts.stack ? ' sticky--stack' : '')
+    }, [
       el('span', { class: 'sticky__label', text: label }),
-      el('div', { class: 'seg' }, items.map(function (it) {
+      el('div', { class: 'seg' + (opts.fill ? ' seg--fill' : '') }, items.map(function (it) {
         return el('button', {
-          class: 'seg__btn seg__btn--stack' + (it.id === value ? ' is-active' : '') + (it.tone ? ' seg__btn--' + it.tone : ''),
+          class: 'seg__btn seg__btn--stack' + (it.id === value ? ' is-active' : '') +
+            (opts.tall ? ' seg__btn--tall' : '') + (it.tone ? ' seg__btn--' + it.tone : ''),
           title: it.hint || it.label,
           onclick: function () { onPick(it.id); }
         }, [
@@ -142,44 +145,29 @@
     wrap.appendChild(playerBar(ctx));
     wrap.appendChild(setRow(ctx));
 
+    /* ο τύπος υποδοχής ΕΙΝΑΙ η καταχώρηση: πατάς το παίκτη και μετά τον τύπο */
     wrap.appendChild(segmented('Τύπος υποδοχής', C.RECEPTION_TARGETS.map(function (t) {
       return { id: t.id, label: t.label, hint: t.hint, sub: t.sub, tone: 'rec' };
-    }), ctx.sticky.recTarget, function (v) { ctx.setSticky('recTarget', v); }, { wide: true }));
+    }), ctx.sticky.recTarget, function (v) { logReception(ctx, v); }, { stack: true, fill: true, tall: true }));
 
-    var grid = el('div', { class: 'grid2' });
-    C.RECEPTION_RESULTS.forEach(function (r) {
-      grid.appendChild(el('button', {
-        class: 'btn btn--big btn--' + r.tone,
-        onclick: function () { logReception(ctx, r.id); }
-      }, [
-        el('span', { class: 'amat-btn__emoji', text: r.emoji }),
-        el('span', { class: 'amat-btn__label', text: r.label })
-      ]));
-    });
-    wrap.appendChild(grid);
-
-    wrap.appendChild(el('div', { class: 'legend' }, [
-      el('span', { text: 'Τύπος 1 = μόνο OH · 2 = OH/OPP · 3 = OH, OPP, MB' })
-    ]));
+    wrap.appendChild(el('p', { class: 'hint', text: 'Πάτα παίκτη και μετά τον τύπο — η υποδοχή καταχωρείται αμέσως.' }));
     return wrap;
   }
 
-  function logReception(ctx, result) {
+  function logReception(ctx, target) {
     var m = ctx.match;
     if (!ctx.selected) { warnPlayer(ctx); return; }
+    ctx.sticky.recTarget = target;   /* θυμάται τον τελευταίο για ενόπιση */
     V.Store.addEvent(m.id, {
       set: ctx.set,
       type: 'reception',
       playerId: ctx.selected,
-      result: result,
-      target: ctx.sticky.recTarget
+      target: target
     });
-    V.ui.buzz(result === 'ace' ? 20 : 10);
+    V.ui.buzz(10);
     V.ui.toast(
-      V.Store.playerName(m, ctx.selected) + ' · ' + V.label.receptionResult(result) +
-      ' · τύπος ' + ctx.sticky.recTarget,
-      { tone: result === 'good' ? 'good' : (result === 'ace' || result === 'error' ? 'bad' : 'neutral'),
-        actionLabel: 'Undo', onAction: function () { undo(ctx); } }
+      V.Store.playerName(m, ctx.selected) + ' · υποδοχή τύπος ' + target,
+      { tone: 'neutral', actionLabel: 'Undo', onAction: function () { undo(ctx); } }
     );
   }
 
@@ -344,11 +332,17 @@
     var who = V.Store.playerName(m, e.playerId);
     switch (e.type) {
       case 'attack': return who + ' · ' + V.label.attackKind(e.kind) + ' · ' + V.label.attackResult(e.kind, e.result);
-      case 'reception': return who + ' · υποδοχή ' + V.label.receptionResult(e.result);
+      case 'reception': return who + ' · υποδοχή τύπος ' + e.target;
       case 'pass': return who + ' · πάσα → ' + V.label.passTarget(e.target);
       case 'serve': return who + ' · σερβίς ' + V.label.serveResult(e.result);
       default: return e.type;
     }
+  }
+
+  /* υπότιτλος υποδοχής: τι σημαίνει ο τύπος (το 0 δεν έχει) */
+  function receptionTargetSub(id) {
+    var t = V.byId(C.RECEPTION_TARGETS, id);
+    return (t && t.sub) ? t.sub : '';
   }
 
   V.views = V.views || {};

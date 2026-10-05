@@ -204,6 +204,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: .8rem 0; }
 
 /* κουμπί με δύο γραμμές: αριθμός + επιθέτες (1 / 2 / 3 υποδοχής) */
 .seg__btn--stack { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 74px; padding: .35rem .5rem; }
+.seg__btn--tall { min-height: 62px; flex: 1; justify-content: center; }
 .seg__btn__n { font-size: 1.05rem; font-weight: 800; line-height: 1.1; }
 .seg__btn__sub { font-size: .58rem; font-weight: 700; letter-spacing: .02em; opacity: .78; white-space: nowrap; }
 .seg__btn--stack.is-active .seg__btn__sub { opacity: .85; }
@@ -212,10 +213,18 @@ hr { border: 0; border-top: 1px solid var(--line); margin: .8rem 0; }
 
 .sticky { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .sticky--wide { justify-content: space-between; }
+.sticky--stack { flex-direction: column; align-items: stretch; gap: .35rem; }
+.sticky--stack .sticky__label { text-align: left; }
+.seg--fill { display: flex; width: 100%; }
+.seg--fill .seg__btn { flex: 1 1 0; min-width: 0; }
 .sticky__label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 .sticky__hint { font-size: .72rem; color: var(--accent2); font-weight: 700; }
 
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+
+/* υποδοχές: κουμπιά μόνο με κείμενο */
+.grid2 .btn--big .amat-btn__label { font-size: .98rem; font-weight: 800; }
+.grid2 .btn--big { min-height: 64px; }
 
 /* πλέγμα χτυπημάτων: κεντραρισμένο, κάθε είδος σε δική του κάψη */
 .amat-grid {

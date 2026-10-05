@@ -138,6 +138,8 @@
         value: ev.filter(function (e) { return e.target === t.id; }).length
       };
     });
+    /* παλιές καταχωρήσεις μπορεί να έχουν «αποτέλεσμα» — τις κρατάμε αν υπάρχουν */
+    var hasResults = Object.keys(byResult).length > 0;
 
     return {
       total: ev.length,
@@ -145,7 +147,8 @@
       ace: byResult.ace || 0,
       error: byResult.error || 0,
       poor: byResult.poor || 0,
-      goodPct: pct(byResult.good || 0, ev.length),
+      goodPct: hasResults ? pct(byResult.good || 0, ev.length) : null,
+      hasResults: hasResults,
       players: players,
       targets: targets,
       resultCounts: resultRows('reception', ev)
@@ -207,24 +210,29 @@
       var byType = countBy(p.events, function (e) { return e.stype; });
       var total = p.events.length;
       var aces = byResult.ace || 0;
-      var points = (byResult.ace || 0) + (byResult.point || 0);
+      var out = byResult.out || 0;
+      var saved = byResult.easy || 0;
+      /* παλιά αρχεία μπορεί να έχουν και 'point' */
+      var points = aces + (byResult.point || 0);
       return {
         id: p.id,
         name: p.name,
         position: p.player ? p.player.position : '',
         total: total,
-        aces: aces,
+        aces: points,
         points: points,
-        errors: (byResult.out || 0) + (byResult.easy || 0),
-        out: byResult.out || 0,
-        easy: byResult.easy || 0,
+        out: out,
+        easy: saved,
+        saved: saved,
+        errors: out,
+        byResult: byResult,
         jump: byType.jump || 0,
         float: byType.float || 0,
-        acePct: pct(aces, total),
+        acePct: pct(points, total),
         pointPct: pct(points, total),
-        errorPct: pct((byResult.out || 0) + (byResult.easy || 0), total)
+        errorPct: pct(out, total)
       };
-    }).sort(function (a, b) { return b.aces - a.aces || b.points - a.points; });
+    }).sort(function (a, b) { return b.aces - a.aces || b.total - a.total; });
 
     var byType = countBy(ev, function (e) { return e.stype; });
 
@@ -257,7 +265,7 @@
       var pas = ev.filter(function (e) { return e.type === 'pass'; });
       var kills = atk.filter(function (e) { return e.result === 'point'; }).length;
       var aces = srv.filter(function (e) { return e.result === 'ace'; }).length;
-      var goodRec = rec.filter(function (e) { return e.result === 'good'; }).length;
+      var recNoBlock = rec.filter(function (e) { return e.target === '0'; }).length;
       return {
         set: n,
         us: sc.us || 0,
@@ -268,8 +276,7 @@
         kills: kills,
         killPct: pct(kills, atk.length),
         receptions: rec.length,
-        goodRec: goodRec,
-        recPct: pct(goodRec, rec.length),
+        recNoBlock: recNoBlock,
         passes: pas.length,
         serves: srv.length,
         aces: aces,

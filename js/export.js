@@ -82,14 +82,14 @@
 
   function summaryRows(m) {
     var head = ['Αγώνας', 'Σετ', 'Σκορ εμείς', 'Σκορ αντίπαλος', 'Χτυπήματα', 'Πόντοι',
-      '% χτυπημάτων', 'Υποδοχές', 'Καλές υποδοχές', '% υποδοχής', 'Πάσες', 'Σερβίς', 'Aces'];
+      '% χτυπημάτων', 'Υποδοχές', 'Υποδοχές χωρίς μπλόκ', 'Πάσες', 'Σερβίς', 'Aces'];
     var rows = [head];
     V.Stats.bySet(m).forEach(function (r) {
       rows.push([
         slug(m.meta.teamUs) + '-vs-' + slug(m.meta.teamThem),
         r.set, r.us, r.them,
         r.attacks, r.kills, r.killPct == null ? '' : r.killPct + '%',
-        r.receptions, r.goodRec, r.recPct == null ? '' : r.recPct + '%',
+        r.receptions, r.recNoBlock,
         r.passes, r.serves, r.aces
       ]);
     });
@@ -123,7 +123,7 @@
         V.Stats.playerSetsPlayed(m, p.id).join('/'),
         atk ? atk.total : 0, atk ? atk.kills : 0, atk ? (atk.killPct == null ? '' : atk.killPct + '%') : '',
         srv ? srv.total : 0, srv ? srv.aces : 0,
-        rec ? rec.total : 0, rec ? (rec.goodPct == null ? '' : rec.goodPct + '%') : '',
+        rec ? rec.total : 0,
         pas ? pas.total : 0
       ]);
     });
