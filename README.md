@@ -100,22 +100,32 @@
 
 ## Εγκατάσταση
 
-### Στο κινητό (συνιστάται)
-1. Σε υπολογιστή: `npm install && npm start` (ή οποιοδήποτε static server στο φάκελο).
-2. Άνοιξε τη διεύθυνση στο κινητό (ίδιο Wi-Fi).
-3. Σε **Android Chrome**: μενού ⋮ → *Εγκατάσταση εφαρμογής*.
-   Σε **iPhone Safari**: Μοιράσου → *Add to Home Screen*.
+### 🌐 Online (GitHub Pages)
 
-Έτσι έχεις εικονίδιο στην αρχική, fullscreen, και **δουλεύει χωρίς internet** στο γήπεδο.
+**https://apostolostzo.github.io/Volley_Tracker/**
+
+Άνοιξε το link στο κινητό και εγκατέστησε το στην αρχική:
+- **Android Chrome**: μενού ⋮ → *Εγκατάσταση εφαρμογής*
+- **iPhone Safari**: Μοιράσου → *Add to Home Screen*
+
+Κάθε push στο `main` κάνει redeploy αυτόματα (GitHub Actions).
+
+### Στο δίκτυο (Wi-Fi)
+
+```bash
+npm install
+npm start          # http://localhost:8080
+```
+
+Άνοιξε τη διεύθυνση στο κινητό (ίδιο Wi-Fi).
 
 > Σημείωση: το service worker χρησιμοποιεί *network-first* για JS/CSS, άρα όταν έχεις internet
 > παίρνεις πάντα την πιο φρέσκια έκδοση. Offline πέφτει στην κρυφή cache.
 
-### Τοπικά
-```bash
-npm start          # http://localhost:8080
-```
-Χωρίς εγκατάσταση: `npx http-server -p 8080 -c-1`
+### Αν ενεργοποιείς εσύ το GitHub Pages
+
+Το workflow στο `.github/workflows/deploy.yml` κάνει όλη τη δουλειά.
+Εναλλακτικά (χωρίς Actions): **Settings → Pages → Source: Deploy from a branch → `main` / `(root)`**.
 
 ---
 
@@ -125,6 +135,8 @@ npm start          # http://localhost:8080
 index.html                 shell της εφαρμογής
 manifest.webmanifest       PWA manifest
 sw.js                      service worker (offline cache)
+.nojekyll                  απενεργοποιεί το Jekyll στο GitHub Pages
+.github/workflows/deploy.yml  αυτόματο deploy στο GitHub Pages
 css/app.css                θέμα & layout
 js/config.js               ταξινόμηση επιλογών + ρόστερ ομάδας + ελληνικές ετικέτες
 js/store.js                μοντέλο δεδομένων & localStorage
