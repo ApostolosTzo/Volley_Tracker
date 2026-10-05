@@ -124,8 +124,13 @@ npm start          # http://localhost:8080
 
 ### Αν ενεργοποιείς εσύ το GitHub Pages
 
-Το workflow στο `.github/workflows/deploy.yml` κάνει όλη τη δουλειά.
-Εναλλακτικά (χωρίς Actions): **Settings → Pages → Source: Deploy from a branch → `main` / `(root)`**.
+Το workflow στο `.github/workflows/deploy.yml` κάνει όλη τη δουλειά, αλλά το GitHub
+**δεν επιτρέπει σε workflow να δημιουργήσει μόνο του** το Pages site. Χρειάζεται μία φορά:
+
+**Settings → Pages → Build and deployment → Source → `GitHub Actions`** → Save.
+
+Εναλλακτικά χωρίς Actions: Source → `Deploy from a branch` → `main` / `(root)`.
+(Τότε ο ιστότοπος δουλεύει, αλλά το workflow θα βγάζει κόκκινο σε κάθε push.)
 
 ---
 

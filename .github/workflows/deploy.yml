@@ -15,6 +15,10 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+# ΠΡΟΫΠΟΘΕΣΗ: στο repo πρέπει να είναι ενεργοποιημένα τα Pages με
+# Source = "GitHub Actions" (Settings → Pages). Το GitHub δεν επιτρέπει
+# στο workflow να δημιουργήσει μόνο του το Pages site.
+
 jobs:
   deploy:
     environment:
@@ -27,10 +31,6 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          # Ενεργοποιεί τα Pages μόνο του αν δεν είναι ήδη ενεργά
-          # (αλλιώς απαιτεί χειροκίνητη ενεργοποίηση στα Settings)
-          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
