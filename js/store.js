@@ -55,6 +55,7 @@
       subs: [],      // { id, set, outId, inId, position, rally, ts }
       score: {},     // { "1": {us,them,timeoutsUs,timeoutsThem} }
       events: [],    // βλ. makeEvent()
+      autoScore: opts.autoScore !== false,   // +1 αυτόματα στο σκορ
       result: { winner: null, setsUs: 0, setsThem: 0 }
     };
   }
@@ -180,6 +181,13 @@
       touch(m);
       emit();
       return m;
+    },
+
+    /* αυτόματο σκορ on/off για τον αγώνα */
+    setAutoScore: function (id, on) {
+      var m = Store.byId(id); if (!m) return;
+      m.autoScore = !!on;
+      touch(m); emit();
     },
 
     /* --- roster --- */
@@ -469,6 +477,7 @@
       subs: raw.subs || [],
       score: raw.score || {},
       events: (raw.events || []).map(function (e) { return makeEvent(e); }),
+      autoScore: raw.autoScore !== false,
       result: raw.result || { winner: null, setsUs: 0, setsThem: 0 }
     };
     Object.keys(raw.lineups || {}).forEach(function (s) {

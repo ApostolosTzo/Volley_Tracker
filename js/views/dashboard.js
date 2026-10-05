@@ -98,8 +98,9 @@
         CH.bars(rows, { dense: true }),
         el('div', { class: 'tagrow' }, [
           CH.chip('Πόντοι: ' + p.kills, 'good'),
-          CH.chip('Σώθηκε: ' + p.saved, 'neutral'),
-          CH.chip('Block: ' + p.blocked, 'bad'),
+          CH.chip('Saved: ' + p.saved, 'neutral'),
+          CH.chip('Blocked Saved: ' + (p.byResult.block_saved || 0), 'good'),
+          CH.chip('Blocked: ' + p.blocked, 'bad'),
           CH.chip('Out: ' + p.out, 'bad')
         ])
       ])

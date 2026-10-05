@@ -89,6 +89,22 @@
     ]);
   }
 
+  /* ---------------- αυτόματο σκορ ---------------- */
+  /* Δίνει +1 στην ομάδα που δικαιούται τον πόντο, αν το αυτόματο
+     σκορ είναι ενεργοποιημένο. Επιστρέφει 'us' | 'them' | null. */
+  function applyAutoScore(ctx, ev) {
+    if (ctx.match.autoScore === false) return null;
+    var side = C.scoreSideFor(ev);
+    if (!side) return null;
+    V.Store.addPoint(ctx.match.id, ev.set, side, 1);
+    return side;
+  }
+
+  function scoreNote(side) {
+    if (!side) return '';
+    return side === 'us' ? '  ·  +1 εμείς' : '  ·  +1 αντίπαλοι';
+  }
+
   /* ---------------- χτυπήματα ---------------- */
   function renderAttacks(ctx) {
     var wrap = el('div', { class: 'entry' });
@@ -131,11 +147,16 @@
     });
     /* υπενθύμιση για την επόμενη πάσα: ποιος χτύπησε τελευταία */
     ctx.rememberSpiker(kind);
-    V.ui.buzz(result === 'point' ? 18 : 10);
+    var side = applyAutoScore(ctx, ev);
+    V.ui.buzz(side ? 18 : 10);
     V.ui.toast(
       V.Store.playerName(m, ev.playerId) + ' · ' + C.ATTACK_KINDS.find(function (k) { return k.id === kind; }).label + ' · ' +
-      V.label.attackResult(kind, result),
-      { tone: result === 'point' ? 'good' : (result === 'saved' ? 'neutral' : 'bad'), actionLabel: 'Undo', onAction: function () { undo(ctx); } }
+      V.label.attackResult(kind, result) + scoreNote(side),
+      {
+        tone: result === 'point' || result === 'block_saved' ? 'good'
+          : (result === 'saved' ? 'neutral' : 'bad'),
+        actionLabel: 'Undo', onAction: function () { undo(ctx); }
+      }
     );
   }
 
@@ -158,16 +179,17 @@
     var m = ctx.match;
     if (!ctx.selected) { warnPlayer(ctx); return; }
     ctx.sticky.recTarget = target;   /* θυμάται τον τελευταίο για ενόπιση */
-    V.Store.addEvent(m.id, {
+    var ev = V.Store.addEvent(m.id, {
       set: ctx.set,
       type: 'reception',
       playerId: ctx.selected,
       target: target
     });
-    V.ui.buzz(10);
+    var side = applyAutoScore(ctx, ev);
+    V.ui.buzz(side ? 18 : 10);
     V.ui.toast(
-      V.Store.playerName(m, ctx.selected) + ' · υποδοχή τύπος ' + target,
-      { tone: 'neutral', actionLabel: 'Undo', onAction: function () { undo(ctx); } }
+      V.Store.playerName(m, ctx.selected) + ' · υποδοχή τύπος ' + target + scoreNote(side),
+      { tone: side === 'them' ? 'bad' : 'neutral', actionLabel: 'Undo', onAction: function () { undo(ctx); } }
     );
   }
 
@@ -245,6 +267,7 @@
     V.ui.buzz(10);
     var desc = V.Store.playerName(m, ctx.selected) + ' → ' + V.label.passTarget(target) +
       (issues.length ? ' · ' + issues.map(function (i) { return V.label.passIssue(i); }).join(', ') : ' · καθαρή');
+    /* οι πάσες δεν δίνουν πόντο — μόνο ενημέρωση σκορ αν ήταν ενεργό (δεν είναι) */
     V.ui.toast(desc, {
       tone: issues.length ? 'neutral' : 'good',
       actionLabel: 'Undo', onAction: function () { undo(ctx); }
@@ -300,7 +323,7 @@
     var m = ctx.match;
     if (!ctx.selected) { warnPlayer(ctx); return; }
     var stype = ctx.sticky.serveType;
-    V.Store.addEvent(m.id, {
+    var ev = V.Store.addEvent(m.id, {
       set: ctx.set,
       type: 'serve',
       playerId: ctx.selected,
@@ -308,12 +331,15 @@
       result: result,
       zone: ctx.sticky.serveZone
     });
-    V.ui.buzz(result === 'ace' ? 22 : 10);
+    var side = applyAutoScore(ctx, ev);
+    V.ui.buzz(side ? 20 : 10);
     V.ui.toast(
       V.Store.playerName(m, ctx.selected) + ' · ' + V.label.serveType(stype) + ' · ' + V.label.serveResult(result) +
-      (ctx.sticky.serveZone ? ' · ζ.' + ctx.sticky.serveZone : ''),
-      { tone: (result === 'ace' || result === 'point') ? 'good' : 'bad',
-        actionLabel: 'Undo', onAction: function () { undo(ctx); } }
+      (ctx.sticky.serveZone ? ' · ζ.' + ctx.sticky.serveZone : '') + scoreNote(side),
+      {
+        tone: result === 'ace' ? 'good' : (result === 'out' ? 'bad' : 'neutral'),
+        actionLabel: 'Undo', onAction: function () { undo(ctx); }
+      }
     );
   }
 

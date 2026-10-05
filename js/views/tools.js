@@ -289,6 +289,7 @@
     body.appendChild(item('\uD83D\uDD04', 'Αλλαγή παίκτη', m.subs.length + ' αλλαγές', function () { subsDialog(ctx); }));
     body.appendChild(item('\uD83D\uDCCC', 'Νέο σετ', 'Συνέχεια στο επόμενο σετ', function () { nextSet(ctx); }));
     body.appendChild(item('\u270F', 'Στοιχεία αγώνα', 'Ομάδες, ημερομηνία, ημέρα', function () { metaDialog(ctx); }));
+    body.appendChild(toggleAutoScore(ctx));
     body.appendChild(item('\uD83D\uDCCC', 'Διαγραφή Σετ ' + ctx.set, 'Σκορ, στατιστικά & ενδέκη του σετ', function () {
       V.ui.confirm('Διαγραφή Σετ ' + ctx.set, 'Θα χαθούν όλα τα στατιστικά του σετ ' + ctx.set + '.', 'Διαγραφή')
         .then(function (ok) {
@@ -310,6 +311,30 @@
   }
 
   /* =========================================================
+   * Αυτόματο σκορ — on/off
+   * ========================================================= */
+  function toggleAutoScore(ctx) {
+    var on = ctx.match.autoScore !== false;
+    var btn = el('button', { class: 'switch' }, [
+      el('span', { class: 'switch__track' + (on ? ' is-on' : '') }, [el('span', { class: 'switch__dot' })]),
+      el('span', { class: 'switch__text' }, [
+        el('span', { class: 'switch__label', text: 'Αυτόματο σκορ' }),
+        el('span', {
+          class: 'switch__desc',
+          text: on ? 'Μαθαίνουν το σκορ από τα στατιστικά' : 'Απενεργοποιημένο — βάλε το σκορ χειροκίνητα'
+        })
+      ])
+    ]);
+    btn.addEventListener('click', function () {
+      V.Store.setAutoScore(ctx.match.id, !(ctx.match.autoScore !== false));
+      V.ui.buzz(10);
+      V.ui.toast((ctx.match.autoScore !== false) ? 'Αυτόματο σκορ: ΕΝΕΡΓΟ' : 'Αυτόματο σκορ: ΕΝΕΡΓΟΠΟΙΗΜΕΝΟ',
+        { tone: 'info', duration: 1500 });
+    });
+    return el('div', { class: 'menu__toggle' }, [btn]);
+  }
+
+  /* =========================================================
    * Βοήθεια
    * ========================================================= */
   function helpDialog() {
@@ -320,14 +345,15 @@
         el('h4', { text: 'Γρήγορη καταχώρηση' }),
         el('ul', {}, [
           el('li', { text: 'Διάλεξε παίκτη (πάνω) και μετά πάτα το αποτέλεσμα. Ένα στατ σε 2 πατήματα.' }),
-          el('li', { text: 'Το «Στόχος υποδοχής», η «Άμυνα από» και ο «Τύπος σερβίς» μένουν επιλεγμένα — άλλαξε τους μόνο αν χρειάζεται.' }),
+          el('li', { text: 'Ο «Τύπος σερβίς» μένει επιλεγμένος — άλλαξέ τον μόνο αν χρειάζεται.' }),
+          el('li', { text: 'Το σκορ μαθαίνεται αυτόματα από τα στατιστικά. Αν το θεςίς χειροκίνητα, άνοιξε ☰ → Αυτόματο σκορ.' }),
           el('li', { text: 'Το κουμπί ⇄ MB / ⇄ L αλλάζει ποιος είναι ενεργός, χωρίς να μπερδεύονται τα στατιστικά.' }),
           el('li', { text: 'Κάθε καταχώρηση έχει «Undo» στο μήνυμα. Μπορείς να επεξεργαστείς ή διαγράψεις από το Λογόδιο.' })
         ]),
         el('h4', { text: 'Χτυπήματα' }),
-        el('p', { text: 'Tip / Spike / Place. Για κάθε είδος: Point, Σώθηκε, Block, Out/Net. Δείξε το «τι έκανε κάθε παίκτης» στο ιστορικό.' }),
+        el('p', { text: 'Tip / Spike. Για κάθε είδος: Point, Saved, Blocked Saved, Blocked, Out/Net. Δείξε το «τι έκανε κάθε παίκτης» στο ιστορικό.' }),
         el('h4', { text: 'Υποδοχές' }),
-        el('p', { text: 'Τύπος υποδοχής: 1 = μόνο OH, 2 = OH-OPP, 3 = OH-OPP-MB. Αποτέλεσμα: Point / Ace / Λάθος / Ασθενές.' }),
+        el('p', { text: 'Πάτα τον τύπο: 0 = χωρίς μπλόκ, 1 = OH, 2 = OH-OPP, 3 = OH-OPP-MB. Η καταχώρηση γίνεται αμέσως.' }),
         el('h4', { text: 'Πάσες' }),
         el('p', { text: 'Διάλεξε σε ποιον πήγε και τυχόν πρόβλημα. Με το «Καθαρή» καταχωρείς πάσα χωρίς πρόβλημα.' }),
         el('h4', { text: 'Σερβίς' }),

@@ -105,7 +105,7 @@
     }) };
     var body = el('div', { class: 'form' });
 
-    var fUs = V.ui.input({ placeholder: 'π.χ. Ολυμπιακός Βόλι' });
+    var fUs = V.ui.input({ placeholder: 'π.χ. Ολυμπιακός Βόλι', value: C.DEFAULT_TEAM });
     var fThem = V.ui.input({ placeholder: 'π.χ. Παναθηναϊκός' });
     var fDate = V.ui.input({ type: 'date', value: V.Store.todayISO() });
     var fDay = V.ui.input({ placeholder: 'π.χ. 2η αγωνιστική' });

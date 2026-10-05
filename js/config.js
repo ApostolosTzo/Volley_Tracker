@@ -32,17 +32,20 @@
     { id: 'spike', label: 'Spike', accent: '#60a5fa' }
   ];
 
-  /* Θετικό = μπήκε ο πόντος, Αρνητικό = χάθηκε ο πόντος */
+  /* Θετικό = μπήκε ο πόντος, Αρνητικό = χάθηκε ο πόντος
+     block_saved = μπλόκαραν κι εμείς σώσαμε τη μπάλα */
   var ATTACK_RESULTS = {
     tip: [
       { id: 'point', label: 'Point', emoji: '\uD83C\uDFAF', tone: 'good' },
       { id: 'saved', label: 'Saved', emoji: '\uD83D\uDEE1', tone: 'neutral' },
+      { id: 'block_saved', label: 'Blocked Saved', emoji: '\uD83D\uDCAA', tone: 'good', help: 'Μπλόκαραν και σώσαμε τη μπάλα' },
       { id: 'blocked', label: 'Blocked', emoji: '\uD83D\uDEA8', tone: 'bad' },
       { id: 'out', label: 'Out / Net', emoji: '\u274C', tone: 'bad' }
     ],
     spike: [
       { id: 'point', label: 'Point', emoji: '\uD83C\uDFAF', tone: 'good' },
       { id: 'saved', label: 'Saved', emoji: '\uD83D\uDEE1', tone: 'neutral' },
+      { id: 'block_saved', label: 'Blocked Saved', emoji: '\uD83D\uDCAA', tone: 'good', help: 'Μπλόκαραν και σώσαμε τη μπάλα' },
       { id: 'blocked', label: 'Blocked', emoji: '\uD83D\uDEA8', tone: 'bad' },
       { id: 'out', label: 'Out / Net', emoji: '\u274C', tone: 'bad' }
     ]
@@ -129,6 +132,9 @@
     { name: 'Αντρεας Κολλιας', position: 'OH', also: ['OPP'] }
   ];
 
+  /* ---------- ΟΜΑΔΑ (προεπιλογή) ---------- */
+  var DEFAULT_TEAM = 'ΕΘΝΙΚΟΣ Γ.Σ';
+
   /* χαλαρή/χωρίς τόνους σύγκριση ονομάτων για τις προτάσεις */
   function normName(s) {
     return String(s || '')
@@ -164,6 +170,34 @@
     return DEFAULT_ROSTER.some(function (p) { return normName(p.name) === n; });
   }
 
+  /* =============================================================
+   * ΑΥΤΟΜΑΤΟ ΣΚΟΡ
+   * Ποιο γεγονός δίνει πόντο σε ποιον. Ό,τι δεν αναφέρεται εδώ
+   * σημαίνει «η ομάδα συνεχίζει» (π.χ. Saved, Σώθηκε) → κανένας πόντος.
+   * ============================================================= */
+  var AUTO_SCORE = {
+    attack: function (e) {
+      if (e.result === 'point') return 'us';        // μπήκε ο πόντος
+      if (e.result === 'blocked' || e.result === 'out') return 'them';
+      return null;
+    },
+    reception: function (e) {
+      if (e.target === '0') return 'them';
+      return null;
+    },
+    serve: function (e) {
+      if (e.result === 'ace') return 'us';
+      if (e.result === 'out') return 'them';
+      return null;
+    },
+    pass: function () { return null; }
+  };
+
+  function scoreSideFor(e) {
+    var fn = AUTO_SCORE[e && e.type];
+    return fn ? fn(e) : null;
+  }
+
   /* ---------- ΕΙΔΟΣ ΓΕΓΟΝΟΤΩΝ ---------- */
   var EVENT_TYPES = [
     { id: 'attack', label: 'Χτυπήματα', short: 'Χτυπ.' },
@@ -186,9 +220,11 @@
     SERVE_ZONES: SERVE_ZONES,
     SET_RULES: SET_RULES,
     DEFAULT_ROSTER: DEFAULT_ROSTER,
+    DEFAULT_TEAM: DEFAULT_TEAM,
     suggestPosition: suggestPosition,
     isDefaultPlayer: isDefaultPlayer,
     normName: normName,
+    scoreSideFor: scoreSideFor,
     EVENT_TYPES: EVENT_TYPES,
     STORAGE_KEY: 'volleytracker.v1'
   };
