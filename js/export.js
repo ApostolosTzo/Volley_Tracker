@@ -20,28 +20,39 @@
     }, 200);
   }
 
+  /* Τόνοι ελληνικών → βατικά γράμματα, ώστε το όνομα αρχείου να είναι
+     καθαρό και να ταξιδεύει σωστά μέσω e-mail / Drive / Viber. */
+  var TONES = {
+    'ά': 'α', 'έ': 'ε', 'ή': 'η', 'ί': 'ι', 'ό': 'ο', 'ύ': 'υ', 'ώ': 'ω',
+    'ϊ': 'ι', 'ϋ': 'υ', 'ΐ': 'ι', 'ΰ': 'υ',
+    'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ώ': 'Ω'
+  };
+
   function slug(s) {
-    return String(s || 'match').toLowerCase()
-      .replace(/[^a-z0-9α-ωάέήίόύώϊϋΐΰ\-]+/gi, '-')
+    return String(s || '')
+      .toLowerCase()
+      .replace(/[άέήίόύώϊϋΐΰΆΈΉΊΌΎΏΐΰ]/g, function (c) { return TONES[c] || c; })
+      .replace(/[^a-z0-9\-α-ω]+/g, '-')
+      .replace(/-+/g, '-')
       .replace(/^-+|-+$/g, '') || 'match';
   }
 
   function fileName(m, ext) {
     return 'volley-' + slug(m.meta.teamUs) + '-vs-' + slug(m.meta.teamThem) +
-      '-' + (m.meta.date || '') + '.' + (ext || 'volley');
+      '-' + (m.meta.date || '') + '.' + (ext || 'json');
   }
 
   /* ---------------- JSON (μοιράζεται σε άλλον με το ίδιο app) ---------------- */
   function exportMatch(m) {
     var payload = V.Store.exportMatch(m.id);
-    download(fileName(m, 'volley'), JSON.stringify(payload, null, 2), 'application/json');
-    V.ui.toast('Έγινε εξαγωγή — στείλε το αρχείο σε όποιον θέλεις', { tone: 'good' });
+    download(fileName(m, 'json'), JSON.stringify(payload, null, 2), 'application/json');
+    V.ui.toast('Έγινε εξαγωγή .json — στείλε το στο κινητό σου', { tone: 'good', duration: 4500 });
   }
 
   function exportAll() {
     var payload = V.Store.exportAll();
     if (!payload.matches.length) { V.ui.toast('Δεν υπάρχουν αγώνες', { tone: 'warn' }); return; }
-    download('volley-backup-' + V.Store.todayISO() + '.volley', JSON.stringify(payload, null, 2), 'application/json');
+    download('volley-backup-' + V.Store.todayISO() + '.json', JSON.stringify(payload, null, 2), 'application/json');
     V.ui.toast('Εξήχθη όλο το αρχείο (' + payload.matches.length + ' αγώνες)', { tone: 'good' });
   }
 
@@ -172,7 +183,7 @@
     });
 
     body.appendChild(el('label', { class: 'field' }, [
-      el('span', { class: 'field__label', text: 'Αρχείο αγώνα (.volley ή .json)' }),
+      el('span', { class: 'field__label', text: 'Αρχείο αγώνα (.json)' }),
       fileInput,
       fileInfo
     ]));

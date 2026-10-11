@@ -343,7 +343,7 @@
 
     body.appendChild(el('hr', { class: 'menu__sep' }));
 
-    body.appendChild(item('\u2193', 'Εξαγωγή αγώνα (.volley)', 'Στείλε το σε άλλον με την ίδια εφαρμογή', function () { EX().exportMatch(m); }));
+    body.appendChild(item('\u2193', 'Εξαγωγή αγώνα (.json)', 'Στείλε το αρχείο στο κινητό σου', function () { EX().exportMatch(m); }));
     body.appendChild(item('\u2197', 'Εξαγωγή CSV', 'Excel: σύνοψη, παίκτες, καταχωρήσεις', function () { EX().exportCSV(m); }));
     body.appendChild(item('\u2191', 'Εισαγωγή αγώνα', 'Από αρχείο ή επικόλληση', function () { EX().importDialog(); }));
     body.appendChild(item('\uD83D\uDD17', 'Εμφάνιση/απόκρυψη', 'Οδηγίες χρήσης', function () { helpDialog(); }));
@@ -402,7 +402,7 @@
         el('h4', { text: 'Σετ & αλλαγές' }),
         el('p', { text: 'Στο μενού (☰) υπάρχει «Νέο σετ» (σε βοηθά να ξαναγράψεις τους 7 παίκτες) και «Αλλαγή παίκτη».' }),
         el('h4', { text: 'Μοίρασμα' }),
-        el('p', { text: 'Εξαγωγή .volley στέλνεις το αρχείο σε άλλον που έχει την εφαρμογή (μέσω e-mail, Drive, Viber κ.λπ.) και το εισάγει από «Εισαγωγή αγώνα».' })
+        el('p', { text: 'Η εξαγωγή βγάζει αρχείο .json. Το στέλνεις στο κινητό σου (e-mail, Drive, Viber, WhatsApp) και το εισάγεις από «Εισαγωγή αγώνα».' })
       ]),
       actions: [{ label: 'ΟΚ', variant: 'primary' }]
     });
