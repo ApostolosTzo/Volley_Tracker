@@ -4,6 +4,8 @@
 (function (V) {
   'use strict';
 
+  var el = V.ui.el;
+
   function download(filename, content, mime) {
     var blob = new Blob([content], { type: mime || 'application/octet-stream' });
     var url = URL.createObjectURL(blob);
@@ -148,32 +150,119 @@
     V.ui.toast('Έγινε εξαγωγή CSV όλων των αγώνων', { tone: 'good' });
   }
 
-  /* ---------------- import ---------------- */
-  function importFile() {
-    var inp = el('input', { type: 'file', accept: '.volley,.json,application/json', style: 'display:none' });
-    document.body.appendChild(inp);
-    inp.addEventListener('change', function () {
-      var f = inp.files && inp.files[0];
-      if (!f) { document.body.removeChild(inp); return; }
-      var reader = new FileReader();
-      reader.onload = function () {
-        try {
-          var res = V.Store.import(JSON.parse(reader.result));
-          V.ui.toast('Εισήχθησαν ' + res.added + ' αγώνες' + (res.skipped ? ' (' + res.skipped + ' υπάρχουν ήδη)' : ''), { tone: 'good' });
-          if (res.added) location.hash = '#/';
-        } catch (e) {
-          V.ui.toast('Σφάλμα: ' + e.message, { tone: 'bad', duration: 5000 });
-        }
-        document.body.removeChild(inp);
-      };
-      reader.onerror = function () {
-        V.ui.toast('Αδυναμία ανάγνωσης αρχείου', { tone: 'bad' });
-        document.body.removeChild(inp);
-      };
-      reader.readAsText(f);
+  /* ---------------- import ----------------
+   * Στο κινητό τα «κρυφά» file inputs με αυστηρό `accept` δεν
+   * εμφανίζουν το αρχείο (το .volley δεν είναι γνωστός τύπος στο
+   * Android). Γι' αυτό: input ορατό μέσα σε modal + χωρίς φίλτρο
+   * + εναλλακτική επικόλλησης του περιεχομένου.
+   */
+  function importDialog() {
+    var body = el('div', { class: 'form' });
+    var status = el('p', { class: 'hint' });
+
+    /* --- επιλογή αρχείου --- */
+    var fileInput = el('input', { type: 'file', class: 'input file-input' });
+    var fileInfo = el('p', { class: 'field__hint', text: 'Δεν υπάρχει επιλεγμένο αρχείο' });
+
+    fileInput.addEventListener('change', function () {
+      var f = fileInput.files && fileInput.files[0];
+      fileInfo.textContent = f
+        ? f.name + '  ·  ' + Math.max(1, Math.round(f.size / 1024)) + ' KB'
+        : 'Δεν υπάρχει επιλεγμένο αρχείο';
     });
-    inp.click();
+
+    body.appendChild(el('label', { class: 'field' }, [
+      el('span', { class: 'field__label', text: 'Αρχείο αγώνα (.volley ή .json)' }),
+      fileInput,
+      fileInfo
+    ]));
+
+    body.appendChild(el('div', { class: 'or-line' }, [
+      el('span', { class: 'or-line__text', text: 'ή' })
+    ]));
+
+    /* --- εναλλακτική: επικόλληση --- */
+    var ta = el('textarea', {
+      class: 'input',
+      rows: '5',
+      placeholder: 'Επικόλλησε εδώ το περιεχόμενο του αρχείου'
+    });
+    body.appendChild(el('label', { class: 'field' }, [
+      el('span', { class: 'field__label', text: 'Επικόλληση περιεχομένου' }),
+      ta,
+      el('span', {
+        class: 'field__hint',
+        text: 'Αν ο επιλογέας αρχείων δεν δείχνει το αρχείο, άνοιξέ το με οποιοδήποτε πρόγραμμα, αντίγραψε τα περιεχόμενα και επικόλλησέ τα εδώ.'
+      })
+    ]));
+
+    function finish(res, err) {
+      if (err) {
+        status.textContent = '✗ ' + err;
+        status.classList.add('is-error');
+        V.ui.toast('Αποτυχία εισαγωγής: ' + err, { tone: 'bad', duration: 5000 });
+        return false;   /* κράτα το παράθυρο ανοιχτό */
+      }
+      V.ui.toast(
+        'Εισήχθησαν ' + res.added + ' αγώνες' + (res.skipped ? ' (' + res.skipped + ' υπάρχουν ήδη)' : ''),
+        { tone: 'good' }
+      );
+      if (res.added) location.hash = '#/';
+      return true;
+    }
+
+    var d = V.ui.modal({
+      title: 'Εισαγωγή αγώνα',
+      size: 'lg',
+      body: el('div', {}, [body, status]),
+      actions: [
+        { label: 'Άκυρο', variant: 'ghost' },
+        {
+          label: 'Εισαγωγή',
+          variant: 'primary',
+          onClick: function () {
+            var f = fileInput.files && fileInput.files[0];
+            var pasted = ta.value.trim();
+
+            if (f) {
+              var reader = new FileReader();
+              reader.onload = function () {
+                var ok = applyImport(reader.result, finish);
+                if (ok) d.close();
+              };
+              reader.onerror = function () { finish(null, 'Αδυναμία ανάγνωσης αρχείου'); };
+              reader.readAsText(f);
+              return false;   /* κλείνει μόνο αν πετύχει */
+            }
+            if (pasted) return applyImport(pasted, finish);
+
+            status.textContent = '✗ Διάλεξε αρχείο ή επικόλλησε περιεχόμενο';
+            status.classList.add('is-error');
+            return false;
+          }
+        }
+      ]
+    });
   }
+
+  function applyImport(text, cb) {
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return cb(null, 'Το αρχείο δεν είναι σωστής μορφής (JSON). Μήπως άνοιξες λάθος αρχείο;');
+    }
+    var res;
+    try {
+      res = V.Store.import(data);
+    } catch (e) {
+      return cb(null, e.message);
+    }
+    return cb(res, null);
+  }
+
+  /* παλιά συμπεριφορά: άμεση κλήση του διαλόγου */
+  function importFile() { importDialog(); }
 
   V.exporter = {
     download: download,
@@ -182,6 +271,7 @@
     exportCSV: exportCSV,
     exportCSVsAll: exportCSVsAll,
     importFile: importFile,
+    importDialog: importDialog,
     slug: slug
   };
 })(window.V = window.V || {});

@@ -345,7 +345,7 @@
 
     body.appendChild(item('\u2193', 'Εξαγωγή αγώνα (.volley)', 'Στείλε το σε άλλον με την ίδια εφαρμογή', function () { EX().exportMatch(m); }));
     body.appendChild(item('\u2197', 'Εξαγωγή CSV', 'Excel: σύνοψη, παίκτες, καταχωρήσεις', function () { EX().exportCSV(m); }));
-    body.appendChild(item('\u2191', 'Εισαγωγή αγώνα', 'Άνοιξε .volley αρχείο', function () { EX().importFile(); }));
+    body.appendChild(item('\u2191', 'Εισαγωγή αγώνα', 'Από αρχείο ή επικόλληση', function () { EX().importDialog(); }));
     body.appendChild(item('\uD83D\uDD17', 'Εμφάνιση/απόκρυψη', 'Οδηγίες χρήσης', function () { helpDialog(); }));
 
     var d = V.ui.modal({ title: 'Μενού αγώνα', body: body, actions: [{ label: 'Κλείσιμο', variant: 'ghost' }] });
