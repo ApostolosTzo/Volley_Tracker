@@ -107,6 +107,8 @@
   function subsDialog(ctx) {
     var m = ctx.match;
     var body = el('div', {});
+    /* ειδική τιμή: να φύγει χωρίς να μπει κανείς */
+    var NO_IN = '__none__';
 
     var setSel = V.ui.select(
       [V.Store.currentSet(m)].filter(function (v, i, a) { return a.indexOf(v) === i; })
@@ -119,6 +121,10 @@
     var inSel = V.ui.select([], '');
 
     function refresh() {
+      /* κράτα τις επιλογές του χρήστη όταν ξαναφτιάχνουμε τις λίστες */
+      var keepOut = outSel.value;
+      var keepIn = inSel.value;
+
       var set = Number(setSel.value);
       var lu = V.Store.lineup(m, set);
       var onCourt = {};
@@ -136,13 +142,16 @@
 
       V.ui.clear(inSel);
       inSel.appendChild(el('option', { value: '', text: '— διάλεξε —' }));
+      inSel.appendChild(el('option', { value: NO_IN, text: '— χωρίς αντικατάσταση —' }));
       m.roster.forEach(function (p) {
         if (onCourt[p.id]) return;
         inSel.appendChild(el('option', { value: p.id, text: (p.number != null ? '#' + p.number + ' ' : '') + p.name + ' (' + p.position + ')' }));
       });
+
+      outSel.value = keepOut;
+      inSel.value = keepIn;
     }
     setSel.addEventListener('change', refresh);
-    outSel.addEventListener('change', refresh);
     refresh();
 
     body.appendChild(el('div', { class: 'grid2' }, [
@@ -151,27 +160,33 @@
     ]));
 
     /* ιστορικό αλλαγών */
-    var hist = el('div', { class: 'subs-hist' });
-    if (!m.subs.length) hist.appendChild(el('p', { class: 'empty', text: 'Καμία αλλαγή.' }));
-    else {
+    function renderHist() {
+      V.ui.clear(hist);
+      if (!m.subs.length) {
+        hist.appendChild(el('p', { class: 'empty', text: 'Καμία αλλαγή.' }));
+        return;
+      }
       hist.appendChild(V.charts.table(
         ['Σετ', 'Έφυγε', 'Ήρθε', ''],
         m.subs.map(function (s) {
           return [
             { text: String(s.set) },
             { text: V.Store.playerName(m, s.outId) },
-            { text: V.Store.playerName(m, s.inId) },
-            { html: '<button class="icon-btn icon-btn--danger" data-sid="' + s.id + '">✕</button>' }
+            { text: s.inId ? V.Store.playerName(m, s.inId) : '— χωρίς αντικατάσταση —' },
+            { html: '<button class="icon-btn icon-btn--danger" data-sid="' + s.id + '" title="Διαγραφή">✕</button>' }
           ];
         })
       ));
       V.ui.$$('[data-sid]', hist).forEach(function (b) {
         b.addEventListener('click', function () {
           V.Store.removeSub(m.id, b.dataset.sid);
-          b.closest('tr').remove();
+          renderHist();
+          V.ui.toast('Η αλλαγή διαγράφηκε', { tone: 'info', duration: 1500 });
         });
       });
     }
+    var hist = el('div', { class: 'subs-hist' });
+    renderHist();
 
     V.ui.modal({
       title: 'Αλλαγή παίκτη',
@@ -187,26 +202,52 @@
           label: 'Κάνε την αλλαγή',
           variant: 'primary',
           onClick: function () {
-            var outId = outSel.value, inId = inSel.value;
-            if (!outId || !inId) { V.ui.toast('Διάλεξε ποιος φεύγει και ποιος μπαίνει', { tone: 'warn' }); return false; }
+            var outId = outSel.value;
+            var inId = inSel.value;
+            if (!outId) { V.ui.toast('Διάλεξε ποιος φεύγει', { tone: 'warn' }); return false; }
+
+            var removeOnly = inId === NO_IN;
+            if (!removeOnly && !inId) { V.ui.toast('Διάλεξε ποιος μπαίνει ή «χωρίς αντικατάσταση»', { tone: 'warn' }); return false; }
+
             var set = Number(setSel.value);
             var lu = V.Store.lineup(m, set);
             var slot = null;
             C.COURT_SLOTS.forEach(function (s) { if (lu[s.id] === outId) slot = s.id; });
-
-            var patch = {};
-            C.COURT_SLOTS.forEach(function (s) { patch[s.id] = lu[s.id]; });
-            if (slot) {
-              patch[slot] = inId;
-              /* λιμπέρω που μπαίνει → δεύτερη θέση L2 */
-              if (slot === 'L') { patch.L2 = inId; patch.activeL = 'L2'; }
-            } else {
+            if (!slot) {
               V.ui.toast('Ο έφυγε δεν είναι στην ενδέκη αυτού του σετ', { tone: 'warn' });
               return false;
             }
+
+            /* κράτα ΟΛΟΚΛΗΡΗ την ενδέκη — και τα activeMB/activeL,
+               αλλιώς το setLineup τα μηδενίζει */
+            var patch = {};
+            Object.keys(lu).forEach(function (k) { patch[k] = lu[k]; });
+
+            if (removeOnly) {
+              patch[slot] = null;
+              /* αν έφυγε ο ενεργός λιμπέρω, επίστρεψε στον άλλον */
+              if (slot === 'L' && lu.activeL === 'L' && lu.L2) patch.activeL = 'L2';
+              if (slot === 'L2' && lu.activeL === 'L2' && lu.L) patch.activeL = 'L';
+            } else {
+              patch[slot] = inId;
+              /* μπαίνει λιμπέρω → γίνεται ο ενεργός (L2) */
+              if (slot === 'L') { patch.L2 = inId; patch.activeL = 'L2'; }
+              if (slot === 'L2') patch.L2 = inId;
+            }
+
             V.Store.setLineup(m.id, set, patch);
-            V.Store.addSub(m.id, { set: set, outId: outId, inId: inId });
-            V.ui.toast('Αλλαγή: ' + V.Store.playerName(m, outId) + ' ⇄ ' + V.Store.playerName(m, inId), { tone: 'good' });
+            V.Store.addSub(m.id, {
+              set: set, outId: outId,
+              inId: removeOnly ? null : inId
+            });
+
+            var outName = V.Store.playerName(m, outId);
+            V.ui.toast(
+              removeOnly
+                ? outName + ' βγήκε από το γήπεδο (χωρίς αντικατάσταση)'
+                : outName + ' ⇄ ' + V.Store.playerName(m, inId),
+              { tone: 'good' }
+            );
           }
         }
       ]
