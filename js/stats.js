@@ -212,6 +212,7 @@
       var aces = byResult.ace || 0;
       var out = byResult.out || 0;
       var saved = byResult.easy || 0;
+      var difficult = byResult.difficult || 0;
       /* παλιά αρχεία μπορεί να έχουν και 'point' */
       var points = aces + (byResult.point || 0);
       return {
@@ -222,6 +223,7 @@
         aces: points,
         points: points,
         out: out,
+        difficult: difficult,
         easy: saved,
         saved: saved,
         errors: out,
@@ -245,6 +247,46 @@
       }),
       resultCounts: resultRows('serve', ev)
     };
+  }
+
+  /* ---------------- ΑΜΥΝΑ ---------------- */
+  function defenses(m, set) {
+    var ev = filter(m, set).filter(function (e) { return e.type === 'defense'; });
+    var players = playersWithEvents(m, ev).map(function (p) {
+      var byTarget = countBy(p.events, function (e) { return e.target; });
+      var perfect = byTarget['3'] || 0;
+      var total = p.events.length;
+      return {
+        id: p.id,
+        name: p.name,
+        position: p.player ? p.player.position : '',
+        total: total,
+        perfect: perfect,
+        byTarget: byTarget,
+        perfectPct: pct(perfect, total)
+      };
+    }).sort(function (a, b) { return b.total - a.total || b.perfect - a.perfect; });
+
+    var byTarget = countBy(ev, function (e) { return e.target; });
+    return {
+      total: ev.length,
+      perfect: byTarget['3'] || 0,
+      perfectPct: pct(byTarget['3'] || 0, ev.length),
+      players: players,
+      levels: V.CONFIG.DEFENSE_RESULTS.map(function (d) {
+        return { id: d.id, label: d.label, hint: d.hint, value: byTarget[d.id] || 0 };
+      })
+    };
+  }
+
+  /* ---------------- ΣΗΜΕΙΩΣΕΙΣ ---------------- */
+  function notes(m, set) {
+    var list = filter(m, set).filter(function (e) {
+      return e.type === 'note' && e.text;
+    });
+    return list.slice().reverse().map(function (e) {
+      return { id: e.id, set: e.set, ts: e.ts, text: e.text };
+    });
   }
 
   /* ---------------- ΣΕΤ ΑΝΑ ΣΕΤ ---------------- */
@@ -293,6 +335,8 @@
       receptions: receptions(m, set),
       passes: passes(m, set),
       serves: serves(m, set),
+      defenses: defenses(m, set),
+      notes: notes(m, set),
       sets: bySet(m)
     };
   }
@@ -322,6 +366,8 @@
     passes: passes,
     serves: serves,
     bySet: bySet,
+    defenses: defenses,
+    notes: notes,
     summary: summary,
     playerSetsPlayed: playerSetsPlayed,
     playersWithEvents: playersWithEvents

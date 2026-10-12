@@ -8,6 +8,7 @@
   var C = V.CONFIG;
 
   var TABS = [
+    { id: 'court', label: 'Γήπ.', full: 'Γήπεδο', icon: '\uD83C\uDFC0' },
     { id: 'attack', label: 'Χτυπ.', full: 'Χτυπήματα', icon: '\uD83E\uDD3A' },
     { id: 'reception', label: 'Υποδ.', full: 'Υποδοχές', icon: '\uD83D\uDCD6' },
     { id: 'pass', label: 'Πάσες', full: 'Πάσες', icon: '\uD83C\uDFAF' },
@@ -34,16 +35,18 @@
     var set = V.Store.currentSet(match);
     var c = {
       match: match,
-      tab: 'attack',
+      tab: 'court',
       set: set,
       statSet: 'all',
       selected: null,
       lastSpiker: null,
       lastEdited: null,
       logAll: false,
+      flow: null,
       sticky: defaultSticky(),
       setSelected: function (id) { c.selected = id; render(); },
-      setSet: function (n) { c.set = Number(n); c.autoSelect(true); render(); },
+      /* αλλαγή σετ από το γήπεδο → μηδενίζουμε τη ροή, το σετ έχει άλλη ενδέκη */
+      setSet: function (n) { c.set = Number(n); c.flow = null; c.autoSelect(true); render(true); },
       /* ο πιο φυσικός παίκτης για την τρέχουσα καρτέλα */
       naturalPlayer: function () {
         var players = V.Store.entryPlayers(c.match, c.set);
@@ -138,23 +141,28 @@
     }
 
     var match = V.Store.byId(m[1]);
-    if (!ctx || ctx.match.id !== match.id) ctx = makeCtx(match);
+    if (!ctx || !ctx.match || ctx.match.id !== match.id) ctx = makeCtx(match);
     ctx.match = match;
 
     document.body.classList.add('in-match');
 
     var view = el('div', { class: 'screen' });
     view.appendChild(matchHeader(ctx));
-    view.appendChild(V.views.tools.scoreboard(ctx));
 
-    if (ctx.tab !== 'stats' && ctx.tab !== 'log') {
-      view.appendChild(V.views.tools.lineupStrip(ctx));
+    /* το γήπεδο έχει δικό του συνοπτικό ταμπλό — δεν το επαναλαμβάνουμε */
+    var onCourt = ctx.tab === 'court';
+    if (!onCourt) {
+      view.appendChild(V.views.tools.scoreboard(ctx));
+      if (ctx.tab !== 'stats' && ctx.tab !== 'log') {
+        view.appendChild(V.views.tools.lineupStrip(ctx));
+      }
     }
 
     view.appendChild(tabbar(ctx));
 
     var content = el('div', { class: 'content' });
-    if (ctx.tab === 'stats') content.appendChild(V.views.dashboard.render(ctx));
+    if (onCourt) content.appendChild(V.views.court.render(ctx));
+    else if (ctx.tab === 'stats') content.appendChild(V.views.dashboard.render(ctx));
     else if (ctx.tab === 'log') content.appendChild(V.views.dashboard.renderTimeline(ctx));
     else content.appendChild(V.views.entry.render(ctx));
     view.appendChild(content);
@@ -176,10 +184,14 @@
 
     window.addEventListener('hashchange', function () { render(true); });
     V.Store.onChange(function () {
-      /* τα δεδομένα άλλαξαν — ανανέωσε χωρίς να χαλάσει την καρτέλα */
+      /* τα δεδομένα άλλαξαν — ανανέωσε χωρίς να χαλάσει την καρτέλα.
+         Προσοχή: το ctx.match μηδενίζεται όταν ο αγώνας διαγραφεί, και
+         μπορεί να έρθει ακόμα μία αλλαγή πριν προλάβει το hashchange. */
       if (!ctx) { render(); return; }
-      ctx.match = V.Store.byId(ctx.match.id);
-      if (!ctx.match) { location.hash = '#/'; return; }
+      var id = ctx.match && ctx.match.id;
+      if (!id) { location.hash = '#/'; return; }
+      ctx.match = V.Store.byId(id);
+      if (!ctx.match) { ctx = null; location.hash = '#/'; render(); return; }
       render();
     });
 

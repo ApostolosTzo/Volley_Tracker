@@ -91,12 +91,14 @@
 
   /* ---------------- αυτόματο σκορ ---------------- */
   /* Δίνει +1 στην ομάδα που δικαιούται τον πόντο, αν το αυτόματο
-     σκορ είναι ενεργοποιημένο. Επιστρέφει 'us' | 'them' | null. */
+     σκορ είναι ενεργοποιημένο. Περνάει από το awardPoint, άρα
+     ενημερώνει και ποιος σερβίρει / αν περιστραφήκαμε.
+     Επιστρέφει 'us' | 'them' | null. */
   function applyAutoScore(ctx, ev) {
     if (ctx.match.autoScore === false) return null;
     var side = C.scoreSideFor(ev);
     if (!side) return null;
-    V.Store.addPoint(ctx.match.id, ev.set, side, 1);
+    V.Store.awardPoint(ctx.match.id, ev.set, side, 1);
     return side;
   }
 
@@ -361,6 +363,8 @@
       case 'reception': return who + ' · υποδοχή τύπος ' + e.target;
       case 'pass': return who + ' · πάσα → ' + V.label.passTarget(e.target);
       case 'serve': return who + ' · σερβίς ' + V.label.serveResult(e.result);
+      case 'defense': return who + ' · άμυνα ' + V.label.defenseResult(e.target);
+      case 'note': return 'Σημείωση · ' + (e.text || '');
       default: return e.type;
     }
   }

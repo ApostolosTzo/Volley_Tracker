@@ -122,14 +122,18 @@ hr { border: 0; border-top: 1px solid var(--line); margin: .8rem 0; }
 /* ---------------- tabbar ---------------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  display: grid; grid-template-columns: repeat(6, 1fr);
+  display: flex; flex-wrap: nowrap;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
   background: rgba(13,19,32,.97); border-top: 1px solid var(--line);
   padding-bottom: var(--safe-b);
   backdrop-filter: blur(10px);
 }
+.tabbar::-webkit-scrollbar { display: none; }
 .tabbar__btn {
+  flex: 1 0 auto; min-width: 56px;
   display: flex; flex-direction: column; align-items: center; gap: 1px;
-  padding: .5rem .1rem; background: none; border: 0; color: var(--muted);
+  padding: .5rem .35rem; background: none; border: 0; color: var(--muted);
   font-size: .64rem; font-weight: 700; cursor: pointer; min-height: 58px;
 }
 .tabbar__btn.is-active { color: var(--accent); }
@@ -561,8 +565,230 @@ textarea.input { resize: vertical; }
 
 .editor { display: flex; flex-direction: column; gap: .5rem; }
 
+/* =============================================================
+ * ΓΗΠΕΔΟ — η οθόνη που ακολουθεί τη ροή του παιχνιδιού
+ * ============================================================= */
+.cscreen { display: flex; flex-direction: column; gap: .6rem; padding-bottom: .6rem; }
+
+/* ---------------- ταμπλό σκορο T1 - T2 ---------------- */
+.cscore {
+  display: flex; align-items: center; justify-content: space-between; gap: .4rem;
+  background: linear-gradient(180deg, var(--card) 0%, var(--card2) 100%);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: .35rem; box-shadow: 0 6px 18px rgba(0,0,0,.28);
+}
+.cscore__side { flex: 1; display: flex; align-items: center; gap: .35rem; min-width: 0; }
+.cscore__btn {
+  flex: 0 0 auto; width: 38px; height: 44px;
+  border: 1px solid var(--line); border-radius: 11px;
+  background: rgba(255,255,255,.04); color: var(--muted);
+  font-size: 1.25rem; font-weight: 800; font-family: inherit; cursor: pointer;
+}
+.cscore__btn:active { background: rgba(255,255,255,.12); }
+.cscore__btn--plus { color: var(--accent); border-color: rgba(76,141,255,.45); }
+.cscore__side--us .cscore__btn--plus { color: var(--good); border-color: rgba(46,230,168,.45); }
+.cscore__mid { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.cscore__n {
+  font-size: .64rem; font-weight: 800; letter-spacing: .06em; color: var(--muted);
+  text-transform: uppercase; max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cscore__v { font-size: 1.9rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.cscore__side--us .cscore__v { color: var(--good); }
+.cscore__side--them .cscore__v { color: var(--bad); }
+.cscore__mid2 {
+  flex: 0 0 auto; display: flex; flex-direction: column;
+  align-items: center; gap: 2px; padding: 0 .35rem;
+  border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+}
+.cscore__dash { color: var(--muted); font-size: 1rem; }
+.cscore__sets { display: flex; gap: 2px; margin-top: 2px; }
+.cscore__sets .setsq { font-size: .58rem; padding: 1px 4px; }
+
+/* ---------------- κατάσταση παιχνιδιού ---------------- */
+.cstatus {
+  display: flex; align-items: center; gap: .5rem;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: .5rem .7rem;
+}
+.cstatus__txt {
+  flex: 1; min-width: 0; font-weight: 800; font-size: .92rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------------- το γήπεδο ---------------- */
+.court { display: flex; flex-direction: column; user-select: none; }
+.court__half {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .4rem;
+  padding: .5rem .55rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.court__half--them {
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: 0;
+  background: linear-gradient(180deg, #131a2c 0%, #101728 100%);
+  opacity: .96;
+  padding: .4rem .55rem;
+}
+.court__half--us {
+  border-radius: 0 0 var(--radius) var(--radius);
+  border-top: 0;
+  background: linear-gradient(180deg, #16203a 0%, #1a2540 100%);
+}
+
+/* φιλέ */
+.court__net {
+  position: relative;
+  height: 22px;
+  background: var(--bg2);
+  border-left: 2px dashed var(--muted);
+  border-right: 2px dashed var(--muted);
+  display: flex; align-items: center; justify-content: center;
+}
+.court__net::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 2px; background: var(--muted); opacity: .45; transform: translateY(-50%);
+}
+.court__netlbl {
+  position: relative; font-size: .6rem; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--muted); background: var(--bg2); padding: 0 .45rem;
+}
+
+/* φούσκες */
+.bubble {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; min-height: 56px; padding: .3rem .2rem;
+  border-radius: 12px; border: 1px solid var(--line);
+  font-family: inherit; text-align: center; position: relative;
+}
+/* η αντίπαλη πλευρά είναι απλοί κύκλοι — δεν πατιούνται, δεν έχουν ονόματα */
+.bubble--opp {
+  min-height: 0; width: 46px; height: 46px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(143,160,196,.22);
+  pointer-events: none; user-select: none;
+}
+.bubble--us {
+  background: linear-gradient(180deg, rgba(76,141,255,.14) 0%, rgba(76,141,255,.06) 100%);
+  border-color: rgba(76,141,255,.35);
+  color: var(--text); cursor: pointer;
+}
+.bubble--us:active { background: rgba(76,141,255,.3); transform: scale(.97); }
+.bubble--us.bubble--empty { background: rgba(255,255,255,.02); border-style: dashed; color: var(--muted); }
+.bubble--us.bubble--server {
+  border-color: var(--good);
+  box-shadow: 0 0 0 1px rgba(46,230,168,.35), 0 0 14px rgba(46,230,168,.22);
+  background: linear-gradient(180deg, rgba(46,230,168,.18) 0%, rgba(46,230,168,.06) 100%);
+}
+.bubble__pos {
+  font-size: .62rem; font-weight: 800; letter-spacing: .08em;
+  color: var(--accent); text-transform: uppercase;
+}
+.bubble--server .bubble__pos { color: var(--good); }
+.bubble--empty .bubble__pos { color: var(--muted); }
+.bubble__name { font-size: .82rem; font-weight: 700; line-height: 1.15; }
+.bubble__ball {
+  position: absolute; top: 3px; right: 5px;
+  font-size: .58rem; color: var(--good);
+}
+
+/* οδηγία πάνω από τα κουμπιά */
+.court__hint {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .45rem .2rem 0;
+}
+.court__hinttxt {
+  flex: 1; min-width: 0; font-size: .84rem; font-weight: 700; color: var(--accent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------------- κάτω από το γήπεδο ---------------- */
+.cfoot { display: flex; flex-direction: column; gap: .5rem; }
+.cfoot__row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: .4rem; }
+.cfoot__row--set { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+
+.cbtn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0; min-height: 54px; padding: .3rem .2rem;
+}
+.cbtn--wide { border-color: rgba(255,190,61,.4); }
+.cbtn__ico { font-size: 1.1rem; line-height: 1.1; }
+.cbtn__txt { font-size: .84rem; font-weight: 800; }
+.cbtn__sub {
+  font-size: .58rem; color: var(--muted); font-weight: 600;
+  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.cnote { display: flex; gap: .4rem; align-items: center; }
+.cnote__input { flex: 1; min-width: 0; font-size: .84rem; }
+
+/* ---------------- πλαίσιο αρχικής ρύθμισης ---------------- */
+.startset__intro { color: var(--muted); font-size: .86rem; }
+.startset__zones {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: .35rem;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: 12px; padding: .4rem;
+}
+.zbtn {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: .4rem .2rem; border-radius: 10px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.03);
+  color: var(--text); font-family: inherit; cursor: pointer;
+}
+.zbtn__n { font-size: 1.05rem; font-weight: 800; line-height: 1; }
+.zbtn__t { font-size: .52rem; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
+.zbtn.is-active {
+  border-color: var(--accent); background: rgba(76,141,255,.18);
+  box-shadow: 0 0 0 1px rgba(76,141,255,.3);
+}
+.zbtn.is-active .zbtn__n, .zbtn.is-active .zbtn__t { color: var(--accent); }
+
+/* ---------------- πλέγματα βαθμολογίας (παράθυρα) ---------------- */
+.rategrid { display: grid; gap: .4rem; grid-template-columns: repeat(2, 1fr); }
+.rategrid--atk { grid-template-columns: repeat(2, 1fr); }
+.rategrid .rate--good { grid-column: span 2; }
+.rate {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; min-height: 58px; padding: .5rem .35rem;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: rgba(255,255,255,.04); color: var(--text);
+  font-family: inherit; cursor: pointer; text-align: center;
+}
+.rate:active { transform: scale(.97); }
+.rate__n { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.rate__sub { font-size: .58rem; color: var(--muted); line-height: 1.2; }
+.rate__emoji { font-size: 1.1rem; line-height: 1; }
+.rate__label { font-size: .8rem; font-weight: 700; }
+.rate--good { border-color: rgba(46,230,168,.45); background: rgba(46,230,168,.12); }
+.rate--bad { border-color: rgba(255,92,120,.45); background: rgba(255,92,120,.12); }
+.rate--neutral { border-color: rgba(255,179,71,.4); background: rgba(255,179,71,.1); }
+.rate--default { border-color: rgba(76,141,255,.4); background: rgba(76,141,255,.1); }
+
+/* ---------------- σημειώσεις στα στατιστικά ---------------- */
+.notelist { display: flex; flex-direction: column; gap: .35rem; }
+.noterow {
+  display: flex; align-items: flex-start; gap: .5rem;
+  background: var(--card2); border: 1px solid var(--line);
+  border-radius: 11px; padding: .5rem .6rem;
+}
+.noterow__meta {
+  flex: 0 0 auto; font-size: .62rem; color: var(--muted);
+  font-variant-numeric: tabular-nums; padding-top: .1rem;
+}
+.noterow__text { flex: 1; min-width: 0; font-size: .88rem; line-height: 1.35; }
+
+@media (max-width: 360px) {
+  .rategrid { grid-template-columns: 1fr; }
+  .cfoot__row { grid-template-columns: 1.2fr 1fr 1fr; }
+}
+
 @media (min-width: 760px) {
   .modal-overlay { align-items: center; }
   .modal { border-radius: 18px; }
   .amat-grid { gap: .7rem; }
+  .cscreen { max-width: 640px; margin: 0 auto; }
 }

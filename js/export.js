@@ -70,7 +70,7 @@
   function eventsRows(m) {
     var head = ['Αγώνας', 'Ημερομηνία', 'Αγωνιστική ημέρα', 'Δική ομάδα', 'Αντίπαλος',
       'Σετ', 'Ώρα', 'Κατηγορία', 'Παίκτης', 'Θέση', 'Είδος', 'Αποτέλεσμα',
-      'Τύπος υποδοχής', 'Σε ποιον', 'Προβλήματα πάσας', 'Ζώνη'];
+      'Τύπος υποδοχής', 'Βαθμός άμυνας', 'Σε ποιον', 'Προβλήματα πάσας', 'Ζώνη', 'Σημείωση'];
     var rows = [head];
     m.events.forEach(function (e) {
       var p = V.Store.player(m, e.playerId);
@@ -81,29 +81,38 @@
         (V.CONFIG.EVENT_TYPES.filter(function (x) { return x.id === e.type; })[0] || {}).label || e.type,
         p ? p.name : '',
         p ? p.position : '',
-        V.label.attackKind(e.kind),
+        e.kind ? V.label.attackKind(e.kind) : '',
         V.label.attackResult(e.kind, e.result) || V.label.receptionResult(e.result) ||
           V.label.serveResult(e.result) || '',
-        V.label.receptionTarget(e.target),
-        V.label.passTarget(e.target),
+        e.type === 'reception' ? V.label.receptionTarget(e.target) : '',
+        e.type === 'defense' ? V.label.defenseResult(e.target) : '',
+        e.type === 'pass' ? V.label.passTarget(e.target) : '',
         (e.issues || []).map(function (i) { return V.label.passIssue(i); }).join(' + '),
-        e.zone || ''
+        e.zone || '',
+        e.text || ''
       ]);
     });
     return rows;
   }
 
   function summaryRows(m) {
-    var head = ['Αγώνας', 'Σετ', 'Σκορ εμείς', 'Σκορ αντίπαλος', 'Χτυπήματα', 'Πόντοι',
-      '% χτυπημάτων', 'Υποδοχές', 'Υποδοχές χωρίς μπλόκ', 'Πάσες', 'Σερβίς', 'Aces'];
+    var head = ['Αγώνας', 'Σετ', 'Σκορ εμείς', 'Σκορ αντίπαλος', 'Σερβίρει', 'Σέρβιρε',
+      'Χτυπήματα', 'Πόντοι', '% χτυπημάτων', 'Υποδοχές', 'Υποδοχές χωρίς μπλόκ',
+      'Πάσες', 'Σερβίς', 'Aces', 'Difficult', 'Αμύνες', 'Τέλειες αμύνες'];
     var rows = [head];
     V.Stats.bySet(m).forEach(function (r) {
+      var g = m.game[r.set];
+      var dfn = V.Stats.defenses(m, r.set);
       rows.push([
         slug(m.meta.teamUs) + '-vs-' + slug(m.meta.teamThem),
         r.set, r.us, r.them,
+        g ? (g.server === 'us' ? 'εμείς' : 'αντίπαλοι') : '—',
+        typeof (g && g.rotations) === 'number' ? g.rotations : '',
         r.attacks, r.kills, r.killPct == null ? '' : r.killPct + '%',
         r.receptions, r.recNoBlock,
-        r.passes, r.serves, r.aces
+        r.passes, r.serves, r.aces,
+        (V.Stats.serves(m, r.set).players.reduce(function (s, p) { return s + (p.byResult.difficult || 0); }, 0)),
+        dfn.total, dfn.perfect
       ]);
     });
     return rows;
@@ -111,7 +120,7 @@
 
   function playersRows(m) {
     var head = ['Αγώνας', 'Παίκτης', 'Θέση', 'Σετ που έπαιξε', 'Χτυπήματα', 'Πόντοι',
-      '% πόντοι', 'Σερβίς', 'Aces', 'Υποδοχές', '% καλή υποδοχή', 'Πάσες'];
+      '% πόντοι', 'Σερβίς', 'Aces', 'Υποδοχές', 'Πάσες', 'Αμύνες', 'Τέλειες αμύνες', '% τέλειας άμυνας'];
     var rows = [head];
     var all = m.roster.slice();
     /* παίκτες χωρίς ρόστερ (παλιά αρχεία) */
@@ -130,6 +139,7 @@
       var srv = s.serves.players.filter(function (x) { return x.id === p.id; })[0];
       var rec = s.receptions.players.filter(function (x) { return x.id === p.id; })[0];
       var pas = s.passes.players.filter(function (x) { return x.id === p.id; })[0];
+      var dfn = s.defenses.players.filter(function (x) { return x.id === p.id; })[0];
       rows.push([
         slug(m.meta.teamUs) + '-vs-' + slug(m.meta.teamThem),
         p.name, p.position,
@@ -137,7 +147,9 @@
         atk ? atk.total : 0, atk ? atk.kills : 0, atk ? (atk.killPct == null ? '' : atk.killPct + '%') : '',
         srv ? srv.total : 0, srv ? srv.aces : 0,
         rec ? rec.total : 0,
-        pas ? pas.total : 0
+        pas ? pas.total : 0,
+        dfn ? dfn.total : 0, dfn ? dfn.perfect : 0,
+        dfn ? (dfn.perfectPct == null ? '' : dfn.perfectPct + '%') : ''
       ]);
     });
     return rows;

@@ -33,6 +33,20 @@
     return { us: 0, them: 0, timeoutsUs: 0, timeoutsThem: 0 };
   }
 
+  /* ---------------- κατάσταση αγώνα ανά σετ ----------------
+     server: 'us' | 'them'  — ποιος σερβίρει τώρα
+     order:   { 1..6: slotId } — ποιος παίκτης είναι σε ποια ζώνη
+     zones:   πόσες περιστροφές έχει κάνει η ομάδα (για πληροφορία)
+  */
+  function emptyGame() {
+    return {
+      server: 'us',
+      order: Object.assign({}, V.CONFIG.BASE_ORDER),
+      rotations: 0,
+      servingPlayerId: null
+    };
+  }
+
   /* ---------------- match factory ---------------- */
   function newMatch(opts) {
     opts = opts || {};
@@ -54,6 +68,7 @@
       lineups: {},   // { "1": lineup, "2": lineup }
       subs: [],      // { id, set, outId, inId, position, rally, ts }
       score: {},     // { "1": {us,them,timeoutsUs,timeoutsThem} }
+      game: {},      // { "1": {server, order, rotations} }
       events: [],    // βλ. makeEvent()
       autoScore: opts.autoScore !== false,   // +1 αυτόματα στο σκορ
       result: { winner: null, setsUs: 0, setsThem: 0 }
@@ -61,11 +76,13 @@
   }
 
   /* ---------------- events ----------------
-   * type: attack | reception | pass | serve
+   * type: attack | reception | pass | serve | defense | note
    * attack:    kind, result
-   * reception: result, target(1|2|3)
+   * reception: result, target(0|1|2|3)
    * pass:      target, issues[]
    * serve:     stype, result, zone
+   * defense:   target(0|1|2|3)
+   * note:      text
    */
   function makeEvent(e) {
     return {
@@ -81,7 +98,8 @@
       coverage: e.coverage || null,
       issues: e.issues || [],
       stype: e.stype || null,
-      zone: e.zone || null
+      zone: e.zone || null,
+      text: e.text || null
     };
   }
 
@@ -329,6 +347,84 @@
       sc[side] = Math.max(0, (sc[side] || 0) + (delta || 1));
       touch(m); emit();
     },
+
+    /* --- παιχνίδι: σερβίς & περιστροφή --- */
+    game: function (m, set) {
+      if (!m.game[set]) m.game[set] = emptyGame();
+      /* ασφάλεια: αν λείπει κάτι, γεμίζουμε με τις προεπιλογές */
+      var g = m.game[set];
+      if (!g.order) g.order = Object.assign({}, V.CONFIG.BASE_ORDER);
+      if (g.server !== 'us' && g.server !== 'them') g.server = 'us';
+      if (typeof g.rotations !== 'number') g.rotations = 0;
+      return g;
+    },
+    setGame: function (id, set, patch) {
+      var m = Store.byId(id); if (!m) return;
+      var g = Object.assign(emptyGame(), Store.game(m, set), patch || {});
+      if (patch && patch.order) {
+        /* κρατάμε μόνο έγκυρες ζώνες 1..6 */
+        var ord = {};
+        for (var z = 1; z <= 6; z++) ord[z] = patch.order[z] || g.order[z] || V.CONFIG.BASE_ORDER[z];
+        g.order = ord;
+      }
+      m.game[set] = g;
+      touch(m); emit();
+      return g;
+    },
+
+    /* Ο πόντος πάει στην ομάδα που τον κέρδισε — και εκείνη σερβίρει.
+       Αν κερδίσαμε το σερβίς (side-out), περιστρέφουμε δεξιόστροφα.
+       Το ίδιο μονοπάτι περνάει από τα κουμπιά +/− του ταμπλό, άρα
+       και χειροκίνητη διόρθωση σκορο προκαλεί σωστή περιστροφή. */
+    awardPoint: function (id, set, side, delta) {
+      var m = Store.byId(id); if (!m) return null;
+      delta = delta == null ? 1 : delta;
+      var sc = Store.score(m, set);
+      sc[side] = Math.max(0, (sc[side] || 0) + delta);
+
+      var g = Store.game(m, set);
+      var rotated = false;
+      if (delta > 0 && side !== g.server) {
+        if (side === 'us') {
+          /* κέρδισα το σερβίς → περιστροφή */
+          g.order = V.CONFIG.rotateOrder(g.order, 1);
+          g.rotations = (g.rotations || 0) + 1;
+          rotated = true;
+        }
+        /* αν χάσαμε το σερβίς, περιστρέφονται αυτοί — εμείς δεν το κρατάμε */
+        g.server = side;
+      }
+      touch(m); emit();
+      return { game: g, rotated: rotated };
+    },
+
+    /* Ποιος είναι παίκτης σε κάθε ζώνη, με τα MB/L swaps εφαρμοσμένα.
+       Οι ζώνες κρατούν «θέση» (OH1, S, MB…)· το activeMB/activeL
+       αποφασίζει ΠΟΙΟΣ από τους δύο παίζει αυτή τη στιγμή. */
+    courtPlayers: function (m, set) {
+      var lu = Store.lineup(m, set);
+      var g = Store.game(m, set);
+      var out = [];
+      for (var z = 1; z <= 6; z++) {
+        var slot = g.order[z];
+        /* MB1/MB2 → ενεργός· L/L2 → ενεργός λιμπέρω */
+        var eff = slot;
+        if (slot && slot.indexOf('MB') === 0 && lu.activeMB && lu.activeMB !== slot) eff = lu.activeMB;
+        if (slot && slot.indexOf('L') === 0 && lu.activeL && lu.activeL !== slot) eff = lu.activeL;
+        var pid = lu[eff] || null;
+        var def = null;
+        V.CONFIG.COURT_SLOTS.forEach(function (s) { if (s.id === slot) def = s; });
+        out.push({
+          zone: z,
+          slot: slot,
+          label: def ? def.label : slot,
+          playerId: pid,
+          name: pid ? Store.playerName(m, pid) : '—',
+          position: pid ? (Store.player(m, pid) || {}).position || '' : ''
+        });
+      }
+      return out;
+    },
     addTimeout: function (id, set, side, delta) {
       var m = Store.byId(id); if (!m) return;
       var sc = Store.score(m, set);
@@ -347,6 +443,7 @@
       var m = Store.byId(id); if (!m) return;
       delete m.score[set];
       delete m.lineups[set];
+      delete m.game[set];
       m.events = m.events.filter(function (e) { return e.set !== Number(set); });
       m.subs = m.subs.filter(function (s) { return s.set !== Number(set); });
       touch(m); emit();
@@ -449,6 +546,7 @@
     todayISO: todayISO,
     nowISO: nowISO,
     emptyLineup: emptyLineup,
+    emptyGame: emptyGame,
     normalize: normalize,
     ensureDefaultRoster: ensureDefaultRoster,
     _emit: emit
@@ -476,12 +574,23 @@
       lineups: {},
       subs: raw.subs || [],
       score: raw.score || {},
+      game: {},
       events: (raw.events || []).map(function (e) { return makeEvent(e); }),
       autoScore: raw.autoScore !== false,
       result: raw.result || { winner: null, setsUs: 0, setsThem: 0 }
     };
     Object.keys(raw.lineups || {}).forEach(function (s) {
       m.lineups[s] = Object.assign(emptyLineup(), raw.lineups[s]);
+    });
+    /* κατάσταση σερβίς/περιστροφής — τα παλιά αρχεία δεν έχουν, οπότε
+       ξεκινούν από τη βασική σειρά και τον πρώτο σερβιέρ */
+    Object.keys(raw.game || {}).forEach(function (s) {
+      var g = raw.game[s] || {};
+      m.game[s] = {
+        server: (g.server === 'them') ? 'them' : 'us',
+        order: Object.assign({}, V.CONFIG.BASE_ORDER, g.order || {}),
+        rotations: typeof g.rotations === 'number' ? g.rotations : 0
+      };
     });
     ensureDefaultRoster(m);
     return m;

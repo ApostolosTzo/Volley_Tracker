@@ -95,8 +95,58 @@
   var SERVE_RESULTS = [
     { id: 'ace', label: 'Ace', emoji: '\uD83D\uDCA5', tone: 'good', help: 'Ο πόντος μας' },
     { id: 'out', label: 'Out', emoji: '\u274C', tone: 'bad', help: 'Πόντος τους' },
+    { id: 'difficult', label: 'Difficult', emoji: '\uD83D\uDCCF', tone: 'good', help: 'Δύσκολο σερβίς — δυσκολεύτηκαν να το πιάσουν' },
     { id: 'easy', label: 'Σώθηκε', emoji: '\uD83D\uDEE1', tone: 'neutral', help: 'Δεν έγινε πόντος, διάσωσαν το σερβίς' }
   ];
+
+  /* ---------- ΑΜΥΝΑ (σωσμένη μπάλα μετά από χτύπημα τους) ----------
+     Βαθμοί 0-3 όπως στην υποδοχή: πόσο καλά διαβάστηκε η μπάλα. */
+  var DEFENSE_RESULTS = [
+    { id: '0', label: '0', tone: 'bad', hint: 'Δεν τη διάβασε καθόλου' },
+    { id: '1', label: '1', tone: 'neutral', hint: 'Αργή, μετά βίας την έπιασε' },
+    { id: '2', label: '2', tone: 'default', hint: 'Σωστή αντίδραση' },
+    { id: '3', label: '3', tone: 'good', hint: 'Τέλεια άμυνα' }
+  ];
+
+  /* =============================================================
+   * ΠΕΡΙΣΤΡΟΦΗ ΟΜΑΔΑΣ
+   * Ζώνες (από τη δική μας μεριά):
+   *   1 πίσω-δεξιά (ο σερβιέρ) · 2 μπροστά-δεξιά · 3 μπροστά-μέση
+   *   4 μπροστά-αριστερά · 5 πίσω-αριστερά · 6 πίσω-μέση
+   * Περιστροφή είναι ΔΕΞΙΟΣΤΡΟΦΗ: ο παίκτης της ζώνης n πηγαίνει
+   * στη ζώνη n-1 (1→6→5→4→3→2→1). Ο S από τη 2 πάει στη 1,
+   * ο σερβιέρ από τη 1 πάει στη 6.
+   * ============================================================= */
+  var ZONE_NAMES = {
+    1: 'πίσω δεξιά (σερβίς)', 2: 'μπροστά δεξιά', 3: 'μπροστά μέση',
+    4: 'μπροστά αριστερά', 5: 'πίσω αριστερά', 6: 'πίσω μέση'
+  };
+
+  /* Βασική σχέση: ο σερβιέρ στη ζώνη 1, ο S στη 2 (R1) */
+  var BASE_ORDER = { 1: 'OH1', 2: 'S', 3: 'L', 4: 'OPP', 5: 'OH2', 6: 'MB1' };
+
+  function rotateOrder(order, times) {
+    var cur = Object.assign({}, order);
+    var t = ((times % 6) + 6) % 6;
+    for (var i = 0; i < t; i++) {
+      var next = {};
+      for (var z = 1; z <= 6; z++) next[z] = cur[z === 6 ? 1 : z + 1];
+      cur = next;
+    }
+    return cur;
+  }
+
+  /* Σειρά περιστροφής ώστε ο παίκτης σερβίς να βρίσκεται στη ζώνη n */
+  function orderForSetterZone(n) {
+    n = Math.max(1, Math.min(6, Number(n) || 2));
+    /* στη βασική ο S είναι στη ζώνη 2· μία περιστροφή τον πάει στη 1 */
+    return rotateOrder(BASE_ORDER, ((2 - n) % 6 + 6) % 6);
+  }
+
+  function zoneOfSlot(order, slot) {
+    for (var z = 1; z <= 6; z++) if (order[z] === slot) return z;
+    return null;
+  }
 
   /* Ζώνη σερβίς (προαιρετικό) */
   var SERVE_ZONES = ['1', '2', '3', '4', '5', '6', '9'];
@@ -178,6 +228,7 @@
   var AUTO_SCORE = {
     attack: function (e) {
       if (e.result === 'point') return 'us';        // μπήκε ο πόντος
+      if (e.result === 'block_saved') return 'us';  // μπλόκαραν κι εμείς σώσαμε τη μπάλα
       if (e.result === 'blocked' || e.result === 'out') return 'them';
       return null;
     },
@@ -190,7 +241,9 @@
       if (e.result === 'out') return 'them';
       return null;
     },
-    pass: function () { return null; }
+    pass: function () { return null; },
+    defense: function () { return null; },
+    note: function () { return null; }
   };
 
   function scoreSideFor(e) {
@@ -203,7 +256,9 @@
     { id: 'attack', label: 'Χτυπήματα', short: 'Χτυπ.' },
     { id: 'reception', label: 'Υποδοχές', short: 'Υποδ.' },
     { id: 'pass', label: 'Πάσες', short: 'Πάσες' },
-    { id: 'serve', label: 'Σερβίς', short: 'Σερβ.' }
+    { id: 'serve', label: 'Σερβίς', short: 'Σερβ.' },
+    { id: 'defense', label: 'Άμυνα', short: 'Άμυνα' },
+    { id: 'note', label: 'Σημειώσεις', short: 'Σημ.' }
   ];
 
   V.CONFIG = {
@@ -217,8 +272,14 @@
     PASS_ISSUES: PASS_ISSUES,
     SERVE_TYPES: SERVE_TYPES,
     SERVE_RESULTS: SERVE_RESULTS,
+    DEFENSE_RESULTS: DEFENSE_RESULTS,
     SERVE_ZONES: SERVE_ZONES,
     SET_RULES: SET_RULES,
+    ZONE_NAMES: ZONE_NAMES,
+    BASE_ORDER: BASE_ORDER,
+    rotateOrder: rotateOrder,
+    orderForSetterZone: orderForSetterZone,
+    zoneOfSlot: zoneOfSlot,
     DEFAULT_ROSTER: DEFAULT_ROSTER,
     DEFAULT_TEAM: DEFAULT_TEAM,
     suggestPosition: suggestPosition,
@@ -249,6 +310,7 @@
     passIssue: function (id) { var x = byId(PASS_ISSUES, id); return x ? x.label : id; },
     serveType: function (id) { var x = byId(SERVE_TYPES, id); return x ? x.label : id; },
     serveResult: function (id) { var x = byId(SERVE_RESULTS, id); return x ? x.label : id; },
+    defenseResult: function (id) { var x = byId(DEFENSE_RESULTS, id); return x ? x.label : id; },
     position: function (id) { var x = byId(POSITIONS, id); return x ? x.label : id; }
   };
 })(window.V = window.V || {});

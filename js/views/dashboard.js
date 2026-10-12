@@ -216,7 +216,7 @@
       CH.bars(s.players.map(function (p) {
         return {
           label: String(p.aces), name: p.name, value: p.aces, tone: 'good',
-          sub: p.total + ' σερβίς · ' + p.out + ' out · ' + p.saved + ' σώθηκε'
+          sub: p.total + ' σερβίς · ' + p.out + ' out · ' + (p.byResult.difficult || 0) + ' difficult · ' + p.saved + ' σώθηκε'
         };
       }), { hideEmpty: true }),
       el('h3', { class: 'sub', text: 'Τύπος σερβίς' }),
@@ -241,6 +241,7 @@
             el('div', { class: 'tagrow' }, [
               CH.chip('Ace: ' + p.aces, 'good'),
               CH.chip('Out: ' + p.out, 'bad'),
+              CH.chip('Difficult: ' + (p.byResult.difficult || 0), 'good'),
               CH.chip('Σώθηκε: ' + p.saved, 'neutral')
             ])
           ])
@@ -248,6 +249,67 @@
       }))
     ]);
     return section('Σερβίς', '\uD83C\uDF00', body);
+  }
+
+  /* ---------------- ΑΜΥΝΑ ---------------- */
+  function defenseSection(ctx, s) {
+    if (!s.total) return section('Άμυνα', '\uD83D\uDDE1', emptyState('Δεν υπάρχουν άμυνες σε αυτό το σετ.'));
+
+    var body = el('div', {}, [
+      CH.statCards([
+        { value: String(s.total), label: 'Αμύνες' },
+        { value: String(s.perfect), label: 'Τέλειες (3)', accent: 'good' },
+        { value: V.Stats.fmtPct(s.perfect, s.total), label: 'Ποσοστό τέλειας' }
+      ]),
+      el('h3', { class: 'sub', text: 'Ποιος έκανε άμυνα και πόσες' }),
+      CH.bars(s.players.map(function (p) {
+        return {
+          label: String(p.total), name: p.name, value: p.total, tone: 'default',
+          sub: p.perfect + ' τέλειες · ' + V.Stats.fmtPct(p.perfectPct, 100)
+        };
+      }), { hideEmpty: true }),
+      el('h3', { class: 'sub', text: 'Πώς διάβασαν τη μπάλα (0-3)' }),
+      CH.bars(s.levels.map(function (l) {
+        return { label: l.label, name: l.hint || '', value: l.value, tone: l.id === '3' ? 'good' : 'default' };
+      })),
+      el('h3', { class: 'sub', text: 'Τι έκανε κάθε παίκτης σε κάθε άμυνα' }),
+      el('div', { class: 'detail-list' }, s.players.map(function (p) {
+        var rows = C.DEFENSE_RESULTS.map(function (d) {
+          var n = p.byTarget[d.id] || 0;
+          if (!n) return null;
+          return { label: d.label, name: d.hint || '', value: n, tone: d.tone };
+        }).filter(Boolean);
+        return el('details', { class: 'detail' }, [
+          el('summary', { class: 'detail__sum' }, [
+            el('span', { class: 'detail__name', text: p.name }),
+            el('span', { class: 'detail__meta', text: p.total + ' αμύνες · ' + p.perfect + ' τέλειες' })
+          ]),
+          el('div', { class: 'detail__body' }, [CH.bars(rows, { dense: true })])
+        ]);
+      }))
+    ]);
+    return section('Άμυνα', '\uD83D\uDDE1', body);
+  }
+
+  /* ---------------- ΣΗΜΕΙΩΣΕΙΣ ---------------- */
+  function notesSection(ctx, s) {
+    if (!s.length) return section('Σημειώσεις', '\uD83D\uDCDD', emptyState('Καμία γρήγορη σημείωση.'));
+    var body = el('div', { class: 'notelist' }, s.map(function (n) {
+      return el('div', { class: 'noterow' }, [
+        el('span', { class: 'noterow__meta', text: V.ui.fmtTime(n.ts) + ' · Σετ ' + n.set }),
+        el('span', { class: 'noterow__text', text: n.text }),
+        el('button', {
+          class: 'icon-btn icon-btn--danger',
+          text: '\u2715',
+          title: 'Διαγραφή',
+          onclick: function () {
+            V.Store.removeEvent(ctx.match.id, n.id);
+            V.ui.toast('Η σημείωση διεγράφη', { tone: 'info', duration: 1500 });
+          }
+        })
+      ]);
+    }));
+    return section('Σημειώσεις (' + s.length + ')', '\uD83D\uDCDD', body);
   }
 
   /* ---------------- συνοπτική εικόνα ---------------- */
@@ -400,9 +462,13 @@ function renderTimeline(ctx) {
         ? e.issues.map(function (i) { return V.label.passIssue(i); }).join(' + ')
         : 'χωρίς πρόβλημα');
     } else if (e.type === 'serve') {
+      parts.push(V.label.serveType(e.stype));
       if (e.zone) parts.push('Ζώνη ' + e.zone);
     } else if (e.type === 'attack') {
       parts.push(V.label.attackKind(e.kind));
+    } else if (e.type === 'defense') {
+      var d = V.byId(C.DEFENSE_RESULTS, e.target);
+      if (d && d.hint) parts.push(d.hint);
     }
     return parts.join(' · ');
   }
@@ -479,6 +545,18 @@ function renderTimeline(ctx) {
     } else if (e.type === 'serve') {
       body.appendChild(segRow('Τύπος', C.SERVE_TYPES.map(function (r) { return { id: r.id, label: r.label }; }), 'stype'));
       body.appendChild(segRow('Αποτέλεσμα', C.SERVE_RESULTS.map(function (r) { return { id: r.id, label: r.label }; }), 'result'));
+    } else if (e.type === 'defense') {
+      body.appendChild(segRow('Βαθμός άμυνας', C.DEFENSE_RESULTS.map(function (r) {
+        return { id: r.id, label: r.label + ' · ' + r.hint };
+      }), 'target'));
+    } else if (e.type === 'note') {
+      var noteBox = el('textarea', { class: 'input', rows: '3' });
+      noteBox.value = draft.text || '';
+      body.appendChild(el('label', { class: 'field' }, [
+        el('span', { class: 'field__label', text: 'Σημείωση' }),
+        noteBox
+      ]));
+      body._note = noteBox;
     }
 
     body.appendChild(el('label', { class: 'field' }, [
@@ -510,6 +588,7 @@ function renderTimeline(ctx) {
               target: draft.target,
               stype: draft.stype, zone: draft.zone,
               issues: body._issues || draft.issues || [],
+              text: body._note ? body._note.value : (e.type === 'note' ? draft.text : draft.text),
               set: Number(setSel.value)
             });
             V.ui.toast('Ενημερώθηκε', { tone: 'good' });
@@ -535,6 +614,8 @@ function renderTimeline(ctx) {
         receptionSection(ctx, s.receptions),
         passSection(ctx, s.passes),
         serveSection(ctx, s.serves),
+        defenseSection(ctx, s.defenses),
+        notesSection(ctx, s.notes),
         setTableSection(m)
       ]);
       return wrap;

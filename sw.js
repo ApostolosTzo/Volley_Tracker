@@ -1,7 +1,7 @@
 /* =============================================================
  * sw.js — offline cache (app shell)
  * ============================================================= */
-const CACHE = 'volley-tracker-v1';
+const CACHE = 'volley-tracker-v2';
 
 const ASSETS = [
   './',
@@ -15,6 +15,7 @@ const ASSETS = [
   './js/charts.js',
   './js/export.js',
   './js/app.js',
+  './js/views/court.js',
   './js/views/entry.js',
   './js/views/dashboard.js',
   './js/views/setup.js',
