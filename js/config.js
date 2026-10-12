@@ -217,7 +217,7 @@
     { name: 'Αντωνης', position: 'MB' },
     { name: 'Φιλλιπος', position: 'MB' },
 
-    { name: 'Νικο Κρ.', position: 'OPP' },
+    { name: 'Νίκος Κρ.', position: 'OPP' },
 
     { name: 'Γιουλιανο', position: 'OH' },
     { name: 'Μητσοβαγγελος', position: 'OH' },
@@ -230,6 +230,13 @@
 
   /* ---------- ΟΜΑΔΑ (προεπιλογή) ---------- */
   var DEFAULT_TEAM = 'ΕΘΝΙΚΟΣ Γ.Σ';
+
+  /* Παίκτες που διορθώθηκε το όνομά τους μετά την πρώτη προσθήκη.
+     Εφαρμόζεται σε κάθε αγώνα, αλλιώς θα έμπαινε ο νέος στις λίστες
+     δίπλα στον παλιό και θα είχες δύο ίδιους παίκτες. */
+  var ROSTER_RENAMES = {
+    'Νικο Κρ.': 'Νίκος Κρ.'
+  };
 
   /* χαλαρή/χωρίς τόνους σύγκριση ονομάτων για τις προτάσεις */
   function normName(s) {
@@ -333,6 +340,7 @@
     zoneOfSlot: zoneOfSlot,
     validateOrder: validateOrder,
     DEFAULT_ROSTER: DEFAULT_ROSTER,
+    ROSTER_RENAMES: ROSTER_RENAMES,
     DEFAULT_TEAM: DEFAULT_TEAM,
     suggestPosition: suggestPosition,
     isDefaultPlayer: isDefaultPlayer,

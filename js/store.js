@@ -128,12 +128,14 @@
 
     /* Παίκτες που προστέθηκαν στο σταθερό ρόστερ ΜΕΤΑ τη δημιουργία
        των αγώνων μπαίνουν και στους παλιούς — αλλιώς ένας νέος
-       παίκτης θα έφανεζε μόνο στα νέα αρχεία. */
+       παίκτης θα έφανεζε μόνο στα νέα αρχεία. Το ίδιο και για
+       διορθωμένα ονόματα. */
     var touched = false;
     state.matches.forEach(function (m) {
-      var before = (m.roster || []).length;
+      var before = (m.roster || []).map(function (p) { return p.name; }).join('|');
       ensureDefaultRoster(m);
-      if ((m.roster || []).length !== before) touched = true;
+      var after = (m.roster || []).map(function (p) { return p.name; }).join('|');
+      if (before !== after) touched = true;
     });
     if (touched) save();
   }
@@ -655,6 +657,20 @@
      Είναι απλώς προτεινόμενοι — ο χρήστης μπορεί να τους διαγράψει. */
   function ensureDefaultRoster(m) {
     if (!V.CONFIG.DEFAULT_ROSTER) return m;
+
+    /* 1) διόρθωση ονομάτων παίκτες που μετονομάστηκαν */
+    var renames = V.CONFIG.ROSTER_RENAMES || {};
+    var renameKeys = Object.keys(renames);
+    if (renameKeys.length) {
+      m.roster.forEach(function (p) {
+        var n = V.CONFIG.normName(p.name);
+        renameKeys.forEach(function (oldName) {
+          if (n === V.CONFIG.normName(oldName)) p.name = renames[oldName];
+        });
+      });
+    }
+
+    /* 2) προσθήκη όσων λείπουν */
     var present = {};
     m.roster.forEach(function (p) { present[V.CONFIG.normName(p.name)] = true; });
     V.CONFIG.DEFAULT_ROSTER.forEach(function (d) {
