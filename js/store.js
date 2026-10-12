@@ -123,7 +123,19 @@
       console.error('Αποτυχία ανάγνωσης δεδομένων', e);
       state.matches = [];
       state.currentId = null;
+      return;
     }
+
+    /* Παίκτες που προστέθηκαν στο σταθερό ρόστερ ΜΕΤΑ τη δημιουργία
+       των αγώνων μπαίνουν και στους παλιούς — αλλιώς ένας νέος
+       παίκτης θα έφανεζε μόνο στα νέα αρχεία. */
+    var touched = false;
+    state.matches.forEach(function (m) {
+      var before = (m.roster || []).length;
+      ensureDefaultRoster(m);
+      if ((m.roster || []).length !== before) touched = true;
+    });
+    if (touched) save();
   }
 
   function save() {

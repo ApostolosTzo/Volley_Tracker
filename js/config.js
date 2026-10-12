@@ -217,6 +217,8 @@
     { name: 'Αντωνης', position: 'MB' },
     { name: 'Φιλλιπος', position: 'MB' },
 
+    { name: 'Νικο Κρ.', position: 'OPP' },
+
     { name: 'Γιουλιανο', position: 'OH' },
     { name: 'Μητσοβαγγελος', position: 'OH' },
     { name: 'Τσοτσονις', position: 'OH', also: ['OPP'] },
