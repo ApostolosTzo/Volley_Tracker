@@ -768,6 +768,13 @@ textarea.input { resize: vertical; }
 .rate--neutral { border-color: rgba(255,179,71,.4); background: rgba(255,179,71,.1); }
 .rate--default { border-color: rgba(76,141,255,.4); background: rgba(76,141,255,.1); }
 
+/* πλέγμα επιλογών μέσα σε παράθυρο (ίδιο με την καρτέλα «Χτυπήματα») */
+.modal .amat-grid { gap: .45rem; margin: 0; }
+.modal .amat-col { gap: .35rem; }
+.modal .amat-btn { min-height: 54px; padding: .45rem .3rem; }
+.modal .amat-btn__label { font-size: .76rem; }
+.modal .issues { margin-top: .7rem; }
+
 /* ---------------- σημειώσεις στα στατιστικά ---------------- */
 .notelist { display: flex; flex-direction: column; gap: .35rem; }
 .noterow {

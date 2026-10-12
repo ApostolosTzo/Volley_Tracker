@@ -356,6 +356,15 @@
       if (!g.order) g.order = Object.assign({}, V.CONFIG.BASE_ORDER);
       if (g.server !== 'us' && g.server !== 'them') g.server = 'us';
       if (typeof g.rotations !== 'number') g.rotations = 0;
+
+      /* αυτο-επιδιόρθωση: αρχαίες σειρές μπορεί να έχουν MB πίσω
+         ή λιμπέρω μπροστά (πριν τον κανόνα). Η αλλαγή είναι
+         μη-αναστρεπτέλλουσα, γι' αυτό το κάνουμε εδώ. */
+      var fixed = V.CONFIG.enforceLiberoRule(g.order);
+      if (JSON.stringify(fixed) !== JSON.stringify(g.order)) {
+        g.order = fixed;
+        m.updatedAt = nowISO();
+      }
       return g;
     },
     setGame: function (id, set, patch) {
@@ -367,6 +376,8 @@
         for (var z = 1; z <= 6; z++) ord[z] = patch.order[z] || g.order[z] || V.CONFIG.BASE_ORDER[z];
         g.order = ord;
       }
+      /* ο MB δεν πάει ποτέ πίσω, ο λιμπέρω ποτέ μπροστά */
+      g.order = V.CONFIG.enforceLiberoRule(g.order);
       m.game[set] = g;
       touch(m); emit();
       return g;
@@ -398,32 +409,63 @@
       return { game: g, rotated: rotated };
     },
 
-    /* Ποιος είναι παίκτης σε κάθε ζώνη, με τα MB/L swaps εφαρμοσμένα.
-       Οι ζώνες κρατούν «θέση» (OH1, S, MB…)· το activeMB/activeL
-       αποφασίζει ΠΟΙΟΣ από τους δύο παίζει αυτή τη στιγμή. */
+    /* Ποιος είναι παίκτης σε κάθε ζώνη.
+       Η ζώνη κρατά τη συγκεκριμένη θέση (MB1, MB2, L…) άρα η
+       σειρά από μόνη της λέει ποιος παίκτης είναι εκεί. Το
+       activeMB/activeL υπάρχει για τις παλιές καρτέλες. */
     courtPlayers: function (m, set) {
       var lu = Store.lineup(m, set);
       var g = Store.game(m, set);
       var out = [];
       for (var z = 1; z <= 6; z++) {
         var slot = g.order[z];
-        /* MB1/MB2 → ενεργός· L/L2 → ενεργός λιμπέρω */
-        var eff = slot;
-        if (slot && slot.indexOf('MB') === 0 && lu.activeMB && lu.activeMB !== slot) eff = lu.activeMB;
-        if (slot && slot.indexOf('L') === 0 && lu.activeL && lu.activeL !== slot) eff = lu.activeL;
-        var pid = lu[eff] || null;
+        var pid = lu[slot] || null;
+        /* αν η ζώνη ζητά κεντρικό/λιμπέρω που δεν έχει οριστεί,
+           δοκίμασε τον άλλον — μην άφησε κενή θέση */
+        if (!pid && V.CONFIG.isMBSlot(slot)) {
+          pid = lu[slot === 'MB1' ? 'MB2' : 'MB1'] || lu[lu.activeMB] || null;
+        }
+        if (!pid && V.CONFIG.isLSlot(slot)) {
+          pid = lu[lu.activeL] || lu[slot === 'L' ? 'L2' : 'L'] || null;
+        }
         var def = null;
         V.CONFIG.COURT_SLOTS.forEach(function (s) { if (s.id === slot) def = s; });
         out.push({
           zone: z,
           slot: slot,
           label: def ? def.label : slot,
+          back: V.CONFIG.isBackCourt(z),
           playerId: pid,
           name: pid ? Store.playerName(m, pid) : '—',
           position: pid ? (Store.player(m, pid) || {}).position || '' : ''
         });
       }
       return out;
+    },
+
+    /* Γρήγορη εναλλαγή από το γήπεδο: αλλάζει ΠΟΙΟΣ κεντρικός ή
+       λιμπέρω παίζει, και κρατάει τον activeMB/activeL συνεπή
+       ώστε να μη μπερδεύονται τα στατιστικά στις παλιές καρτέλες. */
+    swapSlot: function (id, set, group) {
+      var m = Store.byId(id); if (!m) return;
+      var lu = Store.lineup(m, set);
+      var g = Store.game(m, set);
+      var isMB = (group === 'MB');
+      var test = isMB ? V.CONFIG.isMBSlot : V.CONFIG.isLSlot;
+      var pair = isMB ? ['MB1', 'MB2'] : ['L', 'L2'];
+
+      /* ποια θέση είναι τώρα στη σειρά περιστροφής */
+      var cur = null, z;
+      for (z = 1; z <= 6; z++) { if (test(g.order[z])) { cur = g.order[z]; break; } }
+      var next = (!cur || cur === pair[0]) ? pair[1] : pair[0];
+
+      if (isMB) lu.activeMB = next; else lu.activeL = next;
+      if (cur) {
+        for (z = 1; z <= 6; z++) if (test(g.order[z])) g.order[z] = next;
+      }
+      g.order = V.CONFIG.enforceLiberoRule(g.order);
+      touch(m); emit();
+      return { slot: next, name: Store.playerName(m, lu[next]), onCourt: !!cur };
     },
     addTimeout: function (id, set, side, delta) {
       var m = Store.byId(id); if (!m) return;

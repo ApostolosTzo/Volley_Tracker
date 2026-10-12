@@ -116,14 +116,47 @@
    * Περιστροφή είναι ΔΕΞΙΟΣΤΡΟΦΗ: ο παίκτης της ζώνης n πηγαίνει
    * στη ζώνη n-1 (1→6→5→4→3→2→1). Ο S από τη 2 πάει στη 1,
    * ο σερβιέρ από τη 1 πάει στη 6.
+   *
+   * ΚΑΝΟΝΑΣ ΒΟΛΙ: ο κεντρικός δεν πηγαίνει ΠΟΤΕ πίσω και ο λιμπέρω
+   * ΠΟΤΕ μπροστά. Η σειρά έχει δύο θέσεις MB (ΜΒ1/ΜΒ2) και μία L.
+   * Όταν μετά την περιστροφή ένας MB πέσει στο πίσω, αλλάζει θέση
+   * με τον λιμπέρω — έτσι ο δεύτερος κεντρικός μπαίνει μπροστά στη
+   * θέση που άδειασε και ο λιμπέρω πάει πίσω να σερβίρει.
    * ============================================================= */
   var ZONE_NAMES = {
     1: 'πίσω δεξιά (σερβίς)', 2: 'μπροστά δεξιά', 3: 'μπροστά μέση',
     4: 'μπροστά αριστερά', 5: 'πίσω αριστερά', 6: 'πίσω μέση'
   };
 
-  /* Βασική σχέση: ο σερβιέρ στη ζώνη 1, ο S στη 2 (R1) */
-  var BASE_ORDER = { 1: 'OH1', 2: 'S', 3: 'L', 4: 'OPP', 5: 'OH2', 6: 'MB1' };
+  /* πίσω περιοχή = ζώνες 5, 6, 1 */
+  var BACK_COURT = [5, 6, 1];
+
+  function isBackCourt(zone) { return BACK_COURT.indexOf(zone) !== -1; }
+  function isMBSlot(slot) { return slot === 'MB1' || slot === 'MB2'; }
+  function isLSlot(slot) { return slot === 'L' || slot === 'L2'; }
+
+  /* Βασική σειρά: ο σερβιέρ στη ζώνη 1, ο S στη 2 (R1). Ο MB1
+     πέφτει στο πίσω (ζώνη 6), άρα τον παίρνει ο λιμπέρω και
+     μπαίνει ο MB2 μπροστά-μέση (ζώνη 3). */
+  var BASE_ORDER = { 1: 'OH1', 2: 'S', 3: 'MB2', 4: 'OPP', 5: 'OH2', 6: 'L' };
+
+  /* Αν κάποιος MB έχει πάει στο πίσω, αλλάζει θέση με τον λιμπέρω.
+     Στη θέση που άδειασε μπαίνει ο ΔΙΑΦΟΡΕΤΙΚΟΣ κεντρικός — αυτός
+     που μένει έξω δεν μπαίνει ποτέ στο πίσω, γι' αυτό βγαίνει. */
+  function enforceLiberoRule(order) {
+    var o = Object.assign({}, order);
+    for (var z = 1; z <= 6; z++) {
+      if (!isMBSlot(o[z]) || !isBackCourt(z)) continue;
+      /* βρες πού είναι ο λιμπέρω και κάνε ανταλλαγή */
+      var w = 0;
+      for (var y = 1; y <= 6; y++) { if (isLSlot(o[y]) && y !== z) { w = y; break; } }
+      if (!w) return o;               /* δεν υπάρχει λιμπέρω — άσε το */
+      var mb = o[z];                   /* κράτα τη θέση πριν την γράψεις */
+      o[z] = o[w];                     /* ο λιμπέρω παίρνει τη θέση πίσω */
+      o[w] = (mb === 'MB1') ? 'MB2' : 'MB1';   /* μπαίνει ο άλλος MB */
+    }
+    return o;
+  }
 
   function rotateOrder(order, times) {
     var cur = Object.assign({}, order);
@@ -131,7 +164,8 @@
     for (var i = 0; i < t; i++) {
       var next = {};
       for (var z = 1; z <= 6; z++) next[z] = cur[z === 6 ? 1 : z + 1];
-      cur = next;
+      /* ο κανόνας του λιμπέρω εφαρμόζεται σε ΚΑΘΕ βήμα */
+      cur = enforceLiberoRule(next);
     }
     return cur;
   }
@@ -146,6 +180,16 @@
   function zoneOfSlot(order, slot) {
     for (var z = 1; z <= 6; z++) if (order[z] === slot) return z;
     return null;
+  }
+
+  /* Παραβιάσεις του γηπέδου: MB πίσω ή L μπροστά */
+  function validateOrder(order) {
+    var bad = [];
+    for (var z = 1; z <= 6; z++) {
+      if (isMBSlot(order[z]) && isBackCourt(z)) bad.push('MB στη ζώνη ' + z);
+      if (isLSlot(order[z]) && !isBackCourt(z)) bad.push('L στη ζώνη ' + z);
+    }
+    return bad;
   }
 
   /* Ζώνη σερβίς (προαιρετικό) */
@@ -276,10 +320,16 @@
     SERVE_ZONES: SERVE_ZONES,
     SET_RULES: SET_RULES,
     ZONE_NAMES: ZONE_NAMES,
+    BACK_COURT: BACK_COURT,
+    isBackCourt: isBackCourt,
+    isMBSlot: isMBSlot,
+    isLSlot: isLSlot,
     BASE_ORDER: BASE_ORDER,
+    enforceLiberoRule: enforceLiberoRule,
     rotateOrder: rotateOrder,
     orderForSetterZone: orderForSetterZone,
     zoneOfSlot: zoneOfSlot,
+    validateOrder: validateOrder,
     DEFAULT_ROSTER: DEFAULT_ROSTER,
     DEFAULT_TEAM: DEFAULT_TEAM,
     suggestPosition: suggestPosition,
