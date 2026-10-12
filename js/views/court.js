@@ -195,13 +195,18 @@
     [4, 3, 2, 5, 6, 1].forEach(function (z) {
       var p = byZone[z] || { zone: z, name: '—', label: '', playerId: null };
       var isServer = (g.server === 'us' && z === 1);
+      var pl = p.playerId ? V.Store.player(m, p.playerId) : null;
+      var num = pl && pl.number != null && pl.number !== '' ? String(pl.number) : '';
       var b = el('button', {
         class: 'bubble bubble--us' + (p.playerId ? '' : ' bubble--empty') + (isServer ? ' bubble--server' : ''),
-        title: p.playerId ? 'Ζώνη ' + z + ' — ' + p.name : 'Ζώνη ' + z + ' — κενό',
+        title: p.playerId ? 'Ζώνη ' + z + ' — ' + (num ? '#' + num + ' ' : '') + p.name : 'Ζώνη ' + z + ' — κενό',
         onclick: function () { onCourtTap(ctx, p); }
       }, [
         el('span', { class: 'bubble__pos', text: p.label || '—' }),
-        el('span', { class: 'bubble__name', text: shortName(p.name) }),
+        el('span', { class: 'bubble__name' }, [
+          num ? el('span', { class: 'bubble__num', text: '#' + num }) : null,
+          el('span', { text: shortName(p.name) })
+        ]),
         isServer ? el('span', { class: 'bubble__ball', text: '\u25CF' }) : null
       ]);
       mine.appendChild(b);

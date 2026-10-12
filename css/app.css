@@ -498,6 +498,50 @@ textarea.input { resize: vertical; }
   background: #0e1524; border: 1px solid var(--line);
   border-radius: 6px; padding: 0 .25rem; min-width: 16px; text-align: center;
 }
+
+/* ---------------- ενδέκη σε σχήμα γηπέδου ---------------- */
+.lc {
+  display: flex; flex-direction: column;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+}
+.lc__row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; padding: .45rem; }
+.lc__net {
+  position: relative; height: 16px;
+  background: var(--bg2);
+  border-top: 2px dashed rgba(143,160,196,.35);
+  border-bottom: 2px dashed rgba(143,160,196,.35);
+  display: flex; align-items: center; justify-content: center;
+}
+.lc__net span {
+  font-size: .55rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); background: var(--bg2); padding: 0 .4rem;
+}
+.lc__cell { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.lc__cell--empty .lc__zone { color: var(--warn); }
+.lc__zone { display: flex; align-items: center; gap: .25rem; font-size: .62rem; }
+.lc__zonen {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 5px;
+  background: var(--accent); color: #04122c;
+  font-weight: 800; font-size: .6rem; flex: 0 0 auto;
+}
+.lc__cell--reserve .lc__zonen { background: var(--good); }
+.lc__slot { font-weight: 800; color: var(--accent); letter-spacing: .04em; }
+.lc__cell--reserve .lc__slot { color: var(--good); }
+.lc__cell--empty .lc__slot { color: var(--warn); }
+.lc__cell .input--select { font-size: .78rem; padding: .45rem .4rem; }
+
+.lc__rest {
+  display: flex; flex-direction: column; gap: .35rem;
+  border-top: 1px dashed var(--line);
+  background: rgba(255,255,255,.02);
+  padding: .45rem .45rem .55rem;
+}
+.lc__restlbl {
+  font-size: .56rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700;
+}
 .lineup-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .swapbox { display: flex; align-items: center; gap: .4rem; flex: 1; min-width: 240px; background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: .4rem .5rem; }
 .swapbox__val { flex: 1; font-weight: 700; }
@@ -690,7 +734,9 @@ textarea.input { resize: vertical; }
 }
 .bubble--server .bubble__pos { color: var(--good); }
 .bubble--empty .bubble__pos { color: var(--muted); }
-.bubble__name { font-size: .82rem; font-weight: 700; line-height: 1.15; }
+.bubble__name { font-size: .82rem; font-weight: 700; line-height: 1.15; display: flex; align-items: baseline; gap: .22rem; justify-content: center; }
+.bubble__num { font-size: .66rem; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bubble--server .bubble__num { color: var(--good); opacity: .8; }
 .bubble__ball {
   position: absolute; top: 3px; right: 5px;
   font-size: .58rem; color: var(--good);

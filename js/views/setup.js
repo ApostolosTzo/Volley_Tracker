@@ -99,7 +99,7 @@
   function newMatchDialog() {
     var draft = { roster: C.DEFAULT_ROSTER.map(function (d) {
       return {
-        id: V.Store.uid('p'), name: d.name, number: '',
+        id: V.Store.uid('p'), name: d.name, number: d.number != null ? String(d.number) : '',
         position: d.position, also: d.also
       };
     }) };
@@ -133,7 +133,14 @@
     /* ενδέκη */
     var lineupBox = el('div', { class: 'lineup-box' });
     var lineupState = {};
-    function refreshLineup() { renderLineupEditor(lineupBox, draft, lineupState); }
+    function refreshLineup() {
+      var empty = C.COURT_SLOTS.every(function (s) { return !lineupState[s.id]; });
+      if (empty && draft.roster.length >= 7) autoAssign(lineupState, draft.roster);
+      /* νέος αγώνας: δεν υπάρχει ακόμη περιστροφή — δείχνουμε τη βασική */
+      renderLineupEditor(lineupBox, {
+        roster: draft.roster, order: C.BASE_ORDER, state: lineupState
+      });
+    }
     refreshLineup();
     body.appendChild(el('h3', { class: 'sub', text: 'Ενδέκη Σετ 1 (7 στο γήπεδο)' }));
     body.appendChild(lineupBox);
@@ -322,25 +329,39 @@
     });
   }
 
-  function renderLineupEditor(box, draft, state, onSlotChange) {
+  /* =========================================================
+   * Ενδέκη σε σχήμα γηπέδου
+   *
+   *   ζ4      ζ3      ζ2     μπροστά
+   *  ─────────── φιλέ ───────────
+   *   ζ5      ζ6      ζ1     πίσω
+   *
+   * Οι δύο «δεύτεροι» (ΜΒ2, Λ2) μένουν από κάτω, εκεί που δεν
+   * πατάει ποτέ ο κανόνας του κεντρικού/λιμπέρω.
+   * Οι ζώνες έρχονται από την τρέχουσα περιστροφή, άρα το γήπεδο
+   * στο παράθυρο είναι ίδιο με αυτό στην οθόνη του αγώνα.
+   * ========================================================= */
+  function renderLineupEditor(box, opts) {
     V.ui.clear(box);
-    var roster = draft.roster;
+    var roster = opts.roster;
+    var order = opts.order;
+    var state = opts.state;
+    var onChange = opts.onChange || function () { };
 
-    /* πρώτη φορά που ανοίγει και είναι κενό → γέμισε αυτόματα */
-    var empty = C.COURT_SLOTS.every(function (s) { return !state[s.id]; });
-    if (empty && roster.length >= 7) autoAssign(state, roster);
+    var used = {};
+    for (var z = 1; z <= 6; z++) used[order[z]] = true;
 
-    var grid = el('div', { class: 'lineup-grid' });
     var missing = [];
+    var court = el('div', { class: 'lc' });
 
-    C.COURT_SLOTS.forEach(function (s) {
-      var want = slotPositions(s.id);
-      var current = state[s.id];
+    function cell(slotId, zone, extra) {
+      var want = slotPositions(slotId);
+      var current = state[slotId];
       var currentPlayer = roster.filter(function (p) { return p.id === current; })[0];
 
       /* μόνο παίκτες που ταιριάζουν στη συγκεκριμένη θέση */
       var matches = roster.filter(function (p) { return matchesSlot(p, want); });
-      if (!matches.length) missing.push(s.reserve ? 'L2' : s.label);
+      if (!matches.length && !extra) missing.push(slotLabel(slotId));
 
       var sel = el('select', { class: 'input input--select' });
       sel.appendChild(el('option', { value: '', text: '— κενό —' }));
@@ -360,23 +381,41 @@
 
       sel.value = current || '';
       sel.addEventListener('change', function () {
-        state[s.id] = sel.value || null;
-        if (onSlotChange) onSlotChange();
+        state[slotId] = sel.value || null;
+        onChange();
       });
 
-      grid.appendChild(el('label', {
-        class: 'lineup-slot' + (s.reserve ? ' lineup-slot--reserve' : '') +
-          (matches.length ? '' : ' lineup-slot--empty')
+      return el('label', {
+        class: 'lc__cell' + (matches.length ? '' : ' lc__cell--empty') + (extra ? ' lc__cell--reserve' : '')
       }, [
-        el('span', { class: 'lineup-slot__pos' }, [
-          el('span', { text: s.reserve ? 'L2' : s.label }),
+        el('span', { class: 'lc__zone', title: C.ZONE_NAMES[zone] || '' }, [
+          el('span', { class: 'lc__zonen', text: extra ? '' : String(zone) }),
+          el('span', { class: 'lc__slot', text: slotLabel(slotId) }),
           el('span', { class: 'slot-count', text: String(matches.length) })
         ]),
         sel
-      ]));
-    });
+      ]);
+    }
 
-    box.appendChild(grid);
+    court.appendChild(el('div', { class: 'lc__row' }, [
+      cell(order[4], 4), cell(order[3], 3), cell(order[2], 2)
+    ]));
+    court.appendChild(el('div', { class: 'lc__net' }, [el('span', { text: 'φιλέ' })]));
+    court.appendChild(el('div', { class: 'lc__row' }, [
+      cell(order[5], 5), cell(order[6], 6), cell(order[1], 1)
+    ]));
+
+    /* όσοι έμειναν εκτός — ο δεύτερος κεντρικός και ο δεύτερος λιμπέρω */
+    var rest = C.COURT_SLOTS.filter(function (s) { return !used[s.id]; });
+    if (rest.length) {
+      court.appendChild(el('div', { class: 'lc__rest' }, [
+        el('span', { class: 'lc__restlbl', text: 'Εκτός γηπέδου' })
+      ].concat(rest.map(function (s) {
+        return cell(s.id, 0, true);
+      }))));
+    }
+
+    box.appendChild(court);
 
     if (missing.length) {
       box.appendChild(el('p', { class: 'field__hint', text: 'Κανένας παίκτης για: ' + missing.join(', ') }));
@@ -386,10 +425,23 @@
       el('button', {
         class: 'btn btn--ghost btn--sm',
         text: '⚡ Αυτόματη εισαγωγή',
-        onclick: function () { autoAssign(state, roster); renderLineupEditor(box, draft, state); }
+        onclick: function () {
+          autoAssign(state, roster);
+          onChange();
+          renderLineupEditor(box, opts);
+        }
       }),
       roster.length ? null : el('span', { class: 'field__hint', text: 'Πρόσθεσε παίκτες για να ορίσεις ενδέκη.' })
     ]));
+  }
+
+  /* ετικέτα θέσης: κρατάμε το νούμερο όταν ξεχωρίζει τον ενεργό
+     από τον δεύτερο (ΜΒ1/ΜΒ2, L/L2) */
+  function slotLabel(slotId) {
+    if (slotId === 'MB1') return 'MB1';
+    if (slotId === 'MB2') return 'MB2';
+    var s = V.byId(C.COURT_SLOTS, slotId);
+    return s ? s.label : slotId;
   }
 
   /* Γέμιζει τις 7 θέσεις από το ρόστερ.
@@ -439,11 +491,25 @@
     state.activeMB = lu.activeMB;
     state.activeL = lu.activeL;
 
+    /* οι ζώνες προέρχονται από την τρέχουσα περιστροφή του σετ —
+       έτσι το γήπεδο στο παράθυρο είναι όπως στην οθόνη */
+    var order = V.Store.game(m, set).order;
+
+    /* πρώτη φορά που ανοίγει και είναι κενό → γέμισε αυτόματα */
+    var empty = C.COURT_SLOTS.every(function (s) { return !state[s.id]; });
+    if (empty && draft.roster.length >= 7) autoAssign(state, draft.roster);
+
     var body = el('div', {});
     var box = el('div', { class: 'lineup-box' });
     var sw = el('div', { class: 'lineup-actions' });
 
-    renderLineupEditor(box, draft, state, function () { renderSw(); });
+    var opts = {
+      roster: draft.roster,
+      order: order,
+      state: state,
+      onChange: function () { renderSw(); }
+    };
+    renderLineupEditor(box, opts);
     body.appendChild(box);
 
     /* ενεργοί MB / L */

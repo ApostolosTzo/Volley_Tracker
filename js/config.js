@@ -206,26 +206,26 @@
    * ως πρόταση θέσης όταν γράφεις όνομα παίκτη.
    * ============================================================= */
   var DEFAULT_ROSTER = [
-    { name: 'Τασος', position: 'L' },
-    { name: 'Ραφ', position: 'L' },
+    { name: 'Τασος', position: 'L', number: 1 },
+    { name: 'Ραφ', position: 'L', number: 2 },
 
-    { name: 'Βασιλης', position: 'S' },
-    { name: 'Δημητρης', position: 'S' },
+    { name: 'Βασιλης', position: 'S', number: 3 },
+    { name: 'Δημητρης', position: 'S', number: 4 },
 
-    { name: 'Αποστολοσ', position: 'MB' },
-    { name: 'Νικος', position: 'MB', also: ['OPP'] },
-    { name: 'Αντωνης', position: 'MB' },
-    { name: 'Φιλλιπος', position: 'MB' },
+    { name: 'Αποστολοσ', position: 'MB', number: 5 },
+    { name: 'Νικος', position: 'MB', number: 6, also: ['OPP'] },
+    { name: 'Αντωνης', position: 'MB', number: 7 },
+    { name: 'Φιλλιπος', position: 'MB', number: 8 },
 
-    { name: 'Νίκος Κρ.', position: 'OPP' },
+    { name: 'Νίκος Κρ.', position: 'OPP', number: 9 },
 
-    { name: 'Γιουλιανο', position: 'OH' },
-    { name: 'Μητσοβαγγελος', position: 'OH' },
-    { name: 'Τσοτσονις', position: 'OH', also: ['OPP'] },
-    { name: 'Σαββας', position: 'OH' },
-    { name: 'Κοσμας', position: 'OH', also: ['OPP'] },
-    { name: 'Κωνσταντινος Κουτσουραδης', position: 'OH', also: ['OPP'] },
-    { name: 'Αντρεας Κολλιας', position: 'OH', also: ['OPP'] }
+    { name: 'Γιουλιανο', position: 'OH', number: 10 },
+    { name: 'Μητσοβαγγελος', position: 'OH', number: 11 },
+    { name: 'Τσοτσονις', position: 'OH', number: 12, also: ['OPP'] },
+    { name: 'Σαββας', position: 'OH', number: 13 },
+    { name: 'Κοσμας', position: 'OH', number: 14, also: ['OPP'] },
+    { name: 'Κωνσταντινος Κουτσουραδης', position: 'OH', number: 15, also: ['OPP'] },
+    { name: 'Αντρεας Κολλιας', position: 'OH', number: 16, also: ['OPP'] }
   ];
 
   /* ---------- ΟΜΑΔΑ (προεπιλογή) ---------- */

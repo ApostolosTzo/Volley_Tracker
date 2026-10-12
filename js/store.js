@@ -670,14 +670,31 @@
       });
     }
 
-    /* 2) προσθήκη όσων λείπουν */
+    /* 2) αριθμοί μπλικά — μόνο όπου δεν υπάρχει ήδη, και μόνο αν
+       είναι ελεύθερος. Έτσι το 1-16 μπαίνει σε παλιούς αγώνες
+       χωρίς να χαλάσει αριθμό που έβαλες εσύ. */
+    var byName = {};
+    V.CONFIG.DEFAULT_ROSTER.forEach(function (d) { byName[V.CONFIG.normName(d.name)] = d; });
+    m.roster.forEach(function (p) {
+      if (p.number !== null && p.number !== undefined && p.number !== '') return;
+      var d = byName[V.CONFIG.normName(p.name)];
+      if (!d || d.number == null) return;
+      var taken = m.roster.some(function (o) {
+        return o.id !== p.id && Number(o.number) === Number(d.number);
+      });
+      if (!taken) p.number = d.number;
+    });
+
+    /* 3) προσθήκη όσων λείπουν */
     var present = {};
     m.roster.forEach(function (p) { present[V.CONFIG.normName(p.name)] = true; });
     V.CONFIG.DEFAULT_ROSTER.forEach(function (d) {
       var n = V.CONFIG.normName(d.name);
       if (present[n]) return;
+      var taken = m.roster.some(function (o) { return Number(o.number) === Number(d.number); });
       m.roster.push({
-        id: uid('p'), name: d.name, number: null,
+        id: uid('p'), name: d.name,
+        number: (!taken && d.number != null) ? d.number : null,
         position: d.position, also: d.also || null
       });
       present[n] = true;
