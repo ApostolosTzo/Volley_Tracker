@@ -440,6 +440,7 @@
   function slotLabel(slotId) {
     if (slotId === 'MB1') return 'MB1';
     if (slotId === 'MB2') return 'MB2';
+    if (slotId === 'L2') return 'L2';
     var s = V.byId(C.COURT_SLOTS, slotId);
     return s ? s.label : slotId;
   }
