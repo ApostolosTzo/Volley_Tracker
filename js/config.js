@@ -144,20 +144,45 @@
      κανονικό 6-rotation σχήμα. */
   var BASE_ORDER = { 1: 'S', 2: 'OH1', 3: 'MB2', 4: 'OPP', 5: 'OH2', 6: 'L' };
 
-  /* Αν κάποιος MB έχει πάει στο πίσω, αλλάζει θέση με τον λιμπέρω.
-     Στη θέση που άδειασε μπαίνει ο ΔΙΑΦΟΡΕΤΙΚΟΣ κεντρικός — αυτός
-     που μένει έξω δεν μπαίνει ποτέ στο πίσω, γι' αυτό βγαίνει. */
+  /* ΚΑΝΟΝΑΣ ΚΕΝΤΡΙΚΟΥ / ΛΙΜΠΕΡΩ
+   *
+   * Ο κεντρικός ΔΕΝ παίζει πίσω — με μία εξαίρεση: μπορεί να σερβίρει
+   * από τη ζώνη 1. Όταν η θέση του πέφτει πίσω στο σερβίς:
+   *
+   *   · μένει εκεί και σερβίρει ο ίδιος
+   *   · στη θέση που πήγε ο λιμπέρω μπαίνει ο ΔΕΥΤΕΡΟΣ κεντρικός
+   *   · ο λιμπέρω βγαίνει από το γήπεδο (παίζουμε δύο MB, χωρίς L)
+   *
+   * Όταν μετά το επόμενο rotation ο MB ξαναβγαίνει μπροστά, τότε
+   * αντί για δεύτερο κεντρικό μπαίνει ο λιμπέρω — όπως σε αγώνα.
+   */
   function enforceLiberoRule(order) {
     var o = Object.assign({}, order);
+    var mbs = [], lz = 0;
     for (var z = 1; z <= 6; z++) {
-      if (!isMBSlot(o[z]) || !isBackCourt(z)) continue;
-      /* βρες πού είναι ο λιμπέρω και κάνε ανταλλαγή */
-      var w = 0;
-      for (var y = 1; y <= 6; y++) { if (isLSlot(o[y]) && y !== z) { w = y; break; } }
-      if (!w) return o;               /* δεν υπάρχει λιμπέρω — άσε το */
-      var mb = o[z];                   /* κράτα τη θέση πριν την γράψεις */
-      o[z] = o[w];                     /* ο λιμπέρω παίρνει τη θέση πίσω */
-      o[w] = (mb === 'MB1') ? 'MB2' : 'MB1';   /* μπαίνει ο άλλος MB */
+      if (isMBSlot(o[z])) mbs.push(z);
+      else if (isLSlot(o[z])) lz = z;
+    }
+    var server = serverZone();
+
+    /* (α) Κεντρικός στις ζώνες 5 ή 6 — δεν μπορεί, εκεί δεν σερβίρει.
+           Τον καλύπτει ο λιμπέρω. Στη ζώνη 1 ο κεντρικός είναι μέσα:
+           σερβίρει ο ίδιος. */
+    for (var i = 0; i < mbs.length; i++) {
+      var mbz = mbs[i];
+      if (mbz === server || !isBackCourt(mbz)) continue;
+      if (lz && isBackCourt(lz)) continue;   /* ήδη καλυπται */
+      if (!lz) { o[mbz] = 'L'; lz = mbz; }
+    }
+
+    /* (β) Λιμπέρω μπροστά: μπαίνει ο ΔΕΥΤΕΡΟΣ κεντρικός στη θέση του
+           και ο λιμπέρω βγαίνει από το γήπεδο. Ο κεντρικός που
+           πήγε πίσω μένει εκεί — σερβίρει. */
+    if (lz && !isBackCourt(lz)) {
+      var backMb = mbs.filter(function (z) { return isBackCourt(z); })[0];
+      if (backMb != null) {
+        o[lz] = (o[backMb] === 'MB1') ? 'MB2' : 'MB1';
+      }
     }
     return o;
   }
@@ -187,13 +212,26 @@
     return null;
   }
 
-  /* Παραβιάσεις του γηπέδου: MB πίσω ή L μπροστά */
+  /* Παραβιάσεις του γηπέδου. Ο MB στο πίσω δεν είναι από μόνος του
+   * παραβίαση (σερβίρει άνωστα)· γίνεται όταν ταυτόχρονα υπάρχει
+   * και λιμπέρω στο γήπεδο, οπότε το φτιάχνουμε. */
   function validateOrder(order) {
     var bad = [];
+    var srv = serverZone();
+    var lOn = 0;
     for (var z = 1; z <= 6; z++) {
-      if (isMBSlot(order[z]) && isBackCourt(z)) bad.push('MB στη ζώνη ' + z);
-      if (isLSlot(order[z]) && !isBackCourt(z)) bad.push('L στη ζώνη ' + z);
+      /* ο MB επιτρέπεται μόνο μπροστά ή στη ζώνη 1 να σερβίρει */
+      if (isMBSlot(order[z]) && isBackCourt(z) && z !== srv) {
+        bad.push('MB στη ζώνη ' + z + ' (μπορεί μόνο στη ' + srv + ' να σερβίρει)');
+      }
+      if (isLSlot(order[z])) {
+        lOn++;
+        if (!isBackCourt(z)) bad.push('λιμπέρω στη ζώνη ' + z + ' (μπροστά δεν παίζει)');
+      }
     }
+    var filled = 0;
+    for (z = 1; z <= 6; z++) if (order[z]) filled++;
+    if (filled !== 6) bad.push(filled + ' από 6 θέσεις γεμάτες');
     return bad;
   }
 
@@ -319,6 +357,10 @@
     { id: 'note', label: 'Σημειώσεις', short: 'Σημ.' }
   ];
 
+  /* Ο σερβιέρ είναι ΠΑΝΤΑ ο παίκτης της ζώνης 1 — δεν επιλέγεται */
+  function serverZone() { return 1; }
+
+
   V.CONFIG = {
     POSITIONS: POSITIONS,
     COURT_SLOTS: COURT_SLOTS,
@@ -344,6 +386,7 @@
     orderForSetterZone: orderForSetterZone,
     zoneOfSlot: zoneOfSlot,
     validateOrder: validateOrder,
+    serverZone: serverZone,
     DEFAULT_ROSTER: DEFAULT_ROSTER,
     ROSTER_RENAMES: ROSTER_RENAMES,
     DEFAULT_TEAM: DEFAULT_TEAM,

@@ -16,30 +16,16 @@
   var C = V.CONFIG;
 
   /* =========================================================
-   * Αρχική ρύθμιση σετ: ποιος σερβίρει + σε ποια ζώνη ο S
+   * Αρχική ρύθμιση σετ: πού είναι ο παίκτης σερβίς
+   * Ποιος σερβίρει πρώτος δεν ρωτάμε — θεωρούμε ότι σερβίρει η
+   * δική μας ομάδα, γι' αυτό και η παρακάτω διάταξη έχει τον S
+   * στη ζώνη 1.
    * ========================================================= */
   function startSetDialog(ctx, opts) {
     opts = opts || {};
     var m = ctx.match;
     var set = ctx.set;
-
-    var server = 'us';
-    var zone = 2;
-
-    var srvSeg = el('div', { class: 'seg seg--fill' }, [
-      { id: 'us', label: m.meta.teamUs || 'Εμείς' },
-      { id: 'them', label: m.meta.teamThem || 'Αντίπαλοι' }
-    ].map(function (o) {
-      return el('button', {
-        class: 'seg__btn' + (o.id === server ? ' is-active' : ''),
-        text: o.label,
-        onclick: function () {
-          server = o.id;
-          Array.prototype.forEach.call(this.parentNode.children, function (b) { b.classList.remove('is-active'); });
-          this.classList.add('is-active');
-        }
-      });
-    }));
+    var zone = 1;
 
     /* ζώνες σε σχήμα γηπέδου (μπροστά πάνω, πίσω κάτω) */
     var zoneBox = el('div', { class: 'startset__zones' });
@@ -62,15 +48,14 @@
     });
 
     var body = el('div', { class: 'form' }, [
-      opts.title ? el('p', { class: 'startset__intro', text: opts.title }) : null,
+      el('p', { class: 'startset__intro', text: opts.title || 'Πού είναι ο παίκτης σερβίς στην αρχή του σετ;' }),
       el('div', { class: 'sticky' }, [
-        el('span', { class: 'sticky__label', text: 'Ποιος σερβίρει πρώτος' }),
-        srvSeg
-      ]),
-      el('div', { class: 'sticky' }, [
-        el('span', { class: 'sticky__label', text: 'Πού είναι ο παίκτης σερβίς' }),
+        el('span', { class: 'sticky__label', text: 'Ζώνη παίκτη σερβίς' }),
         zoneBox,
-        el('span', { class: 'field__hint', text: 'Ζώνη 1 = πίσω δεξιά, από όπου σερβίρει. Οι άλλες 5 ακολουθούν μόνες τους.' })
+        el('span', {
+          class: 'field__hint',
+          text: 'Ζώνη 1 = πίσω δεξιά, από όπου σερβίρει η ομάδα. Οι άλλες 5 ακολουθούν μόνες τους.'
+        })
       ])
     ]);
 
@@ -84,16 +69,14 @@
           label: 'Παίξε!', variant: 'primary',
           onClick: function () {
             V.Store.setGame(m.id, set, {
-              server: server,
+              server: 'us',
               order: C.orderForSetterZone(zone),
               rotations: 0,
               servingPlayerId: null
             });
             ctx.flow = null;
             V.ui.buzz(20);
-            V.ui.toast('Σετ ' + set + ' — σερβίρει ' +
-              (server === 'us' ? (m.meta.teamUs || 'η ομάδα μας') : (m.meta.teamThem || 'ο αντίπαλος')) +
-              ' · S στη ζώνη ' + zone, { tone: 'good' });
+            V.ui.toast('Σετ ' + set + ' · S στη ζώνη ' + zone + ' · σερβίρουμε εμείς', { tone: 'good' });
           }
         }
       ]
@@ -254,7 +237,20 @@
       passRating(ctx, p.playerId);
       return;
     }
-    if (f.stage === 'serve') { serveModal(ctx, p.playerId); return; }
+    if (f.stage === 'serve') {
+      /* Σερβίρει ΠΑΝΤΑ ο παίκτης της ζώνης 1 — ο κανόνας του βόλι.
+         Κάποιος άλλος δεν μπορεί να καταχωρήσει σερβίς. */
+      if (p.zone !== C.serverZone()) {
+        var srv = V.Store.courtPlayers(ctx.match, ctx.set).filter(function (x) {
+          return x.zone === C.serverZone();
+        })[0];
+        V.ui.toast('Σερβίρει μόνο ο ' + (srv && srv.playerId ? srv.name : 'παίκτηςς στη ζώνη 1') +
+          ' — ζώνη 1', { tone: 'warn', duration: 2400 });
+        return;
+      }
+      serveModal(ctx, p.playerId);
+      return;
+    }
     receptionRating(ctx, p.playerId);
   }
 
@@ -629,10 +625,9 @@
     /* ποιος παίζει ΑΥΤΗ τη στιγμή στη θέση MB / L */
     function onCourt(group) {
       var test = (group === 'MB') ? C.isMBSlot : C.isLSlot;
-      var row = players.filter(function (p) { return test(p.slot); })[0];
-      if (row) return row.name;
-      var slot = (group === 'MB') ? lu.activeMB : lu.activeL;
-      return lu[slot] ? V.Store.playerName(m, lu[slot]) : '—';
+      var rows = players.filter(function (p) { return test(p.slot); });
+      if (!rows.length) return '—';
+      return rows.map(function (r) { return r.name; }).join(' + ');
     }
 
     /* --- άμυνα --- */
@@ -657,12 +652,11 @@
         onclick: function () {
           var r = V.Store.swapSlot(m.id, ctx.set, group);
           V.ui.buzz(14);
-          V.ui.toast(
-            r && r.onCourt
-              ? (group === 'MB' ? 'Μπαίνει ο ' : 'Μπαίνει ο ') + r.name
-              : 'Δεν υπάρχει θέση για εναλλαγή',
-            { tone: 'info', duration: 1500 }
-          );
+          if (!r || !r.onCourt) {
+            V.ui.toast(r && r.reason ? r.reason : 'Δεν υπάρχει τι να αλλαγή', { tone: 'warn', duration: 1800 });
+            return;
+          }
+          V.ui.toast('Μπαίνει ο ' + r.name, { tone: 'info', duration: 1500 });
         }
       }, [
         el('span', { class: 'cbtn__ico', text: '\u21C4' }),
@@ -723,7 +717,7 @@
         el('button', {
           class: 'btn btn--ghost btn--sm',
           text: 'Ρύθμιση σετ',
-          onclick: function () { startSetDialog(ctx, { title: 'Ποιος σερβίρει και πού είναι ο παίκτης σερβίς.' }); }
+          onclick: function () { startSetDialog(ctx); }
         })
       ])
     ]);
@@ -754,7 +748,7 @@
       canStart ? el('button', {
         class: 'btn btn--primary btn--sm',
         text: 'Ξεκίνα το σετ',
-        onclick: function () { startSetDialog(ctx, { title: 'Ρύθμισε το ξεκίνημα του σετ.' }); }
+        onclick: function () { startSetDialog(ctx); }
       }) : null
     ]);
   }

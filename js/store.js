@@ -468,18 +468,27 @@
       var test = isMB ? V.CONFIG.isMBSlot : V.CONFIG.isLSlot;
       var pair = isMB ? ['MB1', 'MB2'] : ['L', 'L2'];
 
-      /* ποια θέση είναι τώρα στη σειρά περιστροφής */
-      var cur = null, z;
-      for (z = 1; z <= 6; z++) { if (test(g.order[z])) { cur = g.order[z]; break; } }
-      var next = (!cur || cur === pair[0]) ? pair[1] : pair[0];
+      /* ποιες θέσει του ζητούμενου τύπου είναι στη σειρά περιστροφής */
+      var cur = [];
+      for (var z = 1; z <= 6; z++) if (test(g.order[z])) cur.push(g.order[z]);
 
-      if (isMB) lu.activeMB = next; else lu.activeL = next;
-      if (cur) {
-        for (z = 1; z <= 6; z++) if (test(g.order[z])) g.order[z] = next;
+      /* δύο MB παίζουν ή κανένας λιμπέρω — δεν υπάρχει τι να αλλάξει */
+      if (!cur.length || cur.length > 1) {
+        return {
+          slot: null, name: null, onCourt: false,
+          reason: !cur.length
+            ? (isMB ? 'Δεν υπάρχει κεντρικός στο γήπεδο' : 'Ο λιμπέρω είναι εκτός γηπέδου')
+            : 'Και οι δύο κεντρικοί είναι στο γήπεδο'
+        };
       }
+
+      var next = (cur[0] === pair[0]) ? pair[1] : pair[0];
+      if (isMB) lu.activeMB = next; else lu.activeL = next;
+      for (z = 1; z <= 6; z++) if (test(g.order[z])) g.order[z] = next;
+
       g.order = V.CONFIG.enforceLiberoRule(g.order);
       touch(m); emit();
-      return { slot: next, name: Store.playerName(m, lu[next]), onCourt: !!cur };
+      return { slot: next, name: Store.playerName(m, lu[next]), onCourt: true };
     },
     addTimeout: function (id, set, side, delta) {
       var m = Store.byId(id); if (!m) return;
