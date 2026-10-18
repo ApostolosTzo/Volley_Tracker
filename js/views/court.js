@@ -429,15 +429,21 @@
       ctx.sticky.serveType = stype;
       ctx.sticky.serveZone = draft.zone;
 
-      /* «Σώθηκε» / «Difficult» → το rally συνεχίζεται, σερβίρουν αυτοί.
-         Όλα αυτά μπαίνουν ΠΡΙΝ το addEvent, γιατί το addEvent κάνει render. */
+      /* «Σώθηκε» / «Difficult» → ΔΕΝ έγινε πόντος, το rally συνεχίζεται
+         και ΕΜΕΙΣ επιτιθόμαστε, άτι το σερβί παραμένει δικό μας.
+         (Πριν το μπλόκαμε εδώ: μ' έβριζε το σερβί στους αντιπάλους,
+         κι έτσι ο κανόνας του κεντρικού έβγαζε τον MB αμέσως μετά το
+         σερβί, πριν πάρουν καν πόντο.)
+         Όλα μπαίνουν ΠΡΙΝ το addEvent, γιατί το addEvent κάνει render. */
+      var keptRally = (result === 'difficult' || result === 'easy');
       var point = (m.autoScore !== false)
         ? (result === 'ace' ? 'us' : (result === 'out' ? 'them' : null))
         : null;
-      ctx.flow = null;
+
+      ctx.flow = keptRally ? { stage: 'pick-attacker' } : null;
       V.Store.setGame(m.id, ctx.set, {
         servingPlayerId: playerId,
-        server: point ? point : 'them'
+        server: point ? point : (keptRally ? 'us' : 'them')
       });
 
       V.Store.addEvent(m.id, {
@@ -447,12 +453,14 @@
       if (point) V.Store.awardPoint(m.id, ctx.set, point, 1);
 
       if (dlg) dlg.close();
-      scrollToCourt();
+      if (!keptRally) scrollToCourt();
       V.ui.buzz(point ? 20 : 10);
       V.ui.toast(
         name + ' · ' + (stype === 'float' ? 'Float' : 'Άλμα') + ' · ' +
         V.label.serveResult(result) +
-        (point === 'us' ? '  ·  +1 εμείς' : (point === 'them' ? '  ·  +1 αντίπαλοι' : '')),
+        (point === 'us' ? '  ·  +1 εμείς'
+          : (point === 'them' ? '  ·  +1 αντίπαλοι'
+            : (result === 'difficult' ? '  ·  το σώσανε' : ''))),
         {
           tone: result === 'ace' || result === 'difficult' ? 'good' : (result === 'out' ? 'bad' : 'neutral'),
           actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); }
