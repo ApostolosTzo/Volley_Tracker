@@ -338,7 +338,12 @@
       return null;
     },
     pass: function () { return null; },
-    defense: function () { return null; },
+    /* άμυνα 0 = δεν διάσωσε τη μπάλα, έπεσε → πόντος στους αντιπάλους.
+       Οι 1/2/3 σημαίνουν ότι τη σώσαμε, άρα το rally συνεχίζεται. */
+    defense: function (e) {
+      if (e.target === '0') return 'them';
+      return null;
+    },
     note: function () { return null; }
   };
 

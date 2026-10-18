@@ -503,13 +503,22 @@
       return el('button', {
         class: r.id === '3' ? 'good' : (r.id === '0' ? 'bad' : ''),
         onclick: function () {
-          V.Store.addEvent(m.id, { set: ctx.set, type: 'defense', playerId: playerId, target: r.id });
+          /* άμυνα 0 = δεν διάσωσε τη μπάλα → πόντος στους αντιπάλους
+             (μόνο όταν το αυτόματο σκορ είναι ενεργό). */
+          var ev = V.Store.addEvent(m.id, { set: ctx.set, type: 'defense', playerId: playerId, target: r.id });
+          var side = scoreSideFor(m, ev);
+          if (side) V.Store.awardPoint(m.id, ctx.set, side, 1);
+
           if (dlg) dlg.close();
-          V.ui.buzz(12);
-          V.ui.toast(name + ' · άμυνα ' + r.label, {
-            tone: r.id === '3' ? 'good' : 'neutral',
-            actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); }
-          });
+          V.ui.buzz(side ? 18 : 12);
+          V.ui.toast(
+            name + ' · άμυνα ' + r.label +
+            (side === 'them' ? '  ·  +1 αντίπαλοι' : ''),
+            {
+              tone: r.id === '3' ? 'good' : (side === 'them' ? 'bad' : 'neutral'),
+              actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); }
+            }
+          );
         }
       }, [
         el('span', { text: r.label }),

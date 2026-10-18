@@ -517,7 +517,11 @@
     /* --- events --- */
     addEvent: function (id, e) {
       var m = Store.byId(id); if (!m) return null;
+      /* κρατάμε στιγμιότυπο ΠΡΙΝ το γεγονός, ώστε το Undo να
+         επαναφέρει σκόρ, σερβιέρ και περιστροφή μαζί */
+      var beforeSnap = Store.snapshotSet(m, e && e.set);
       var ev = makeEvent(e);
+      if (beforeSnap) ev.before = beforeSnap;
       m.events.push(ev);
       touch(m); emit();
       return ev;
@@ -543,6 +547,36 @@
       touch(m); emit();
       return removed;
     },
+    /* ---------- Αναστροφή κατάστασης σετ (για το Undo) ----------
+       Το awardPoint αλλάζει σκορ + σερβιέρ + περιστροφή μαζί, άρα το
+       απλό «αφαίρεσε τον πόντο» δεν αρκεί: θα άφηνε την ομάδα
+       περιστρεμμένη σε λάθος θέση. Κρατάμε ολόκληρη την κατάσταση. */
+    snapshotSet: function (m, set) {
+      if (!m) return null;
+      var sc = Store.score(m, set);
+      var g = Store.game(m, set);
+      return {
+        us: sc.us || 0,
+        them: sc.them || 0,
+        server: g.server,
+        order: Object.assign({}, g.order),
+        rotations: g.rotations || 0,
+        servingPlayerId: g.servingPlayerId != null ? g.servingPlayerId : null
+      };
+    },
+    restoreSet: function (m, set, snap) {
+      if (!m || !snap) return;
+      var sc = Store.score(m, set);
+      sc.us = snap.us;
+      sc.them = snap.them;
+      var g = Store.game(m, set);
+      g.server = snap.server;
+      g.order = Object.assign({}, snap.order);
+      g.rotations = snap.rotations || 0;
+      g.servingPlayerId = snap.servingPlayerId;
+      touch(m); emit();
+    },
+
     undoLast: function (id) {
       var m = Store.byId(id); if (!m || !m.events.length) return null;
       var ev = m.events[m.events.length - 1];

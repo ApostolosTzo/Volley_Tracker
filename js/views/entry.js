@@ -351,8 +351,14 @@
   }
 
   function undo(ctx) {
-    var ev = V.Store.undoLast(ctx.match.id);
-    if (ev) V.ui.toast('Αναιρέθηκε: ' + eventLabel(ctx.match, ev), { tone: 'info', duration: 1600 });
+    var m = ctx.match;
+    var ev = V.Store.lastEvent(m);
+    if (!ev) return;
+    V.Store.undoLast(m.id);
+    /* το γεγονός μπορεί να είχε δώσει πόντο και περιστροφή —
+       επαναφέρουμε ολόκληρη την κατάσταση του σετ, όχι μόνο τον αριθμό */
+    if (ev.before) V.Store.restoreSet(m, ev.set, ev.before);
+    V.ui.toast('Αναιρέθηκε: ' + eventLabel(m, ev), { tone: 'info', duration: 1600 });
   }
 
   /* περιγραφή γεγονότος για το toast */
