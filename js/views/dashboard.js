@@ -393,7 +393,9 @@
     }));
 
     return section('Σετ ανά σετ', 'SET BY SET', el('div', {}, [
-      rows.length ? CH.table(headers, rows) : emptyState('Δεν υπάρχουν σετ.'),
+      rows.length
+        ? el('div', { class: 'table-wrap' }, [CH.table(headers, rows)])
+        : emptyState('Δεν υπάρχουν σετ.'),
       lineups
     ]));
   }

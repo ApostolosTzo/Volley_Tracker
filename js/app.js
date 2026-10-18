@@ -163,21 +163,27 @@
     var them = m.meta.teamThem || 'Αντίπαλοι';
 
     function side(key, name, value) {
-      return el('div', { class: 'team-score' + (key === 'them' ? ' opponent' : '') + (g.server === key ? ' serving' : '') }, [
-        el('span', { text: name }),
-        el('button', {
-          text: '−', 'aria-label': 'Αφαίρεση πόντου',
-          onclick: function () {
-            if ((sc[key] || 0) <= 0) { V.ui.toast('Το σκορ δεν πάει κάτω', { tone: 'warn', duration: 1200 }); return; }
-            V.ui.buzz(8);
-            V.Store.awardPoint(m.id, c.set, key, -1);
-          }
-        }),
-        el('strong', { text: String(value || 0) }),
-        el('button', {
-          text: '+', 'aria-label': 'Πόντος',
-          onclick: function () { V.ui.buzz(14); V.Store.awardPoint(m.id, c.set, key, 1); }
-        })
+      return el('div', {
+        class: 'ribbon-team ribbon-team--' + key + (g.server === key ? ' serving' : '')
+      }, [
+        /* το όνομα σε δική του σειρά — στο κινητό πάνω από το σκορ,
+           σε desktop αριστερά/δεξιά */
+        el('span', { class: 'ribbon-name', text: name, title: name }),
+        el('div', { class: 'ribbon-score' }, [
+          el('button', {
+            text: '−', 'aria-label': 'Αφαίρεση πόντου από ' + name,
+            onclick: function () {
+              if ((sc[key] || 0) <= 0) { V.ui.toast('Το σκορ δεν πάει κάτω', { tone: 'warn', duration: 1200 }); return; }
+              V.ui.buzz(8);
+              V.Store.awardPoint(m.id, c.set, key, -1);
+            }
+          }),
+          el('strong', { text: String(value || 0) }),
+          el('button', {
+            text: '+', 'aria-label': 'Πόντος για ' + name,
+            onclick: function () { V.ui.buzz(14); V.Store.awardPoint(m.id, c.set, key, 1); }
+          })
+        ])
       ]);
     }
 

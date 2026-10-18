@@ -167,37 +167,43 @@ button:disabled { cursor: not-allowed; opacity: .38; }
   background: #0c1117;
 }
 
-.team-score {
-  flex: 1 1 0; max-width: 340px;
+/* κάθε πλευρά: όνομα + σκορ. min-width:0 ώστε να μη χείλιζει
+   ποτέ εκτός οθόνης (τα flex items default έχουν min-width:auto). */
+.ribbon-team {
+  flex: 1 1 0; min-width: 0; max-width: 340px;
   display: flex; align-items: center; justify-content: center; gap: .9rem;
   padding: 0 1rem;
 }
-.team-score span {
-  flex: 1; min-width: 0;
-  font: 600 1rem/1.2 var(--font-cond); letter-spacing: .1em; text-transform: uppercase;
+.ribbon-team--them { flex-direction: row-reverse; }
+
+.ribbon-name {
+  flex: 1 1 0; min-width: 0;
+  font: 600 1rem/1.2 var(--font-cond);
+  letter-spacing: .1em; text-transform: uppercase;
   color: var(--muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.team-score.opponent { flex-direction: row; }
-.team-score.opponent span { text-align: right; }
+.ribbon-team--them .ribbon-name { text-align: right; }
 
-.team-score button {
+.ribbon-score { display: flex; align-items: center; gap: .9rem; flex: 0 0 auto; }
+
+.ribbon-score button {
   width: 34px; height: 34px; flex: 0 0 auto;
   color: var(--muted);
   border: 1px solid var(--line-2);
   border-radius: var(--radius);
   font-size: 1.1rem; font-weight: 700; line-height: 1;
 }
-.team-score button:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
-.team-score button:last-of-type:hover { color: var(--acid); border-color: rgba(201, 243, 29, .5); }
+.ribbon-score button:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+.ribbon-score button:last-child:hover { color: var(--acid); border-color: rgba(201, 243, 29, .5); }
 
-.team-score strong {
+.ribbon-score strong {
   min-width: 62px; text-align: center;
   font: 700 2.6rem/1 var(--font-cond);
   font-variant-numeric: tabular-nums;
 }
-.team-score.serving strong { color: var(--acid); }
-.team-score.serving span { color: var(--text); }
+.ribbon-team.serving .ribbon-score strong { color: var(--acid); }
+.ribbon-team.serving .ribbon-name { color: var(--text); }
 
 .score-center {
   display: flex; flex-direction: column; align-items: center;
@@ -642,6 +648,11 @@ button:disabled { cursor: not-allowed; opacity: .38; }
 .summary-chips b { color: var(--acid); font-weight: 800; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+/* τα grid items έχουν min-width:auto από προεπιλογή και δεν συμπιέζονται —
+   χωρίς αυτό ο πίνακας παικτών έσπαγε τη σελίδα στο κινητό */
+.stats-grid > *,
+.roster-layout > * { min-width: 0; }
+.table-wrap { min-width: 0; overflow-x: auto; }
 .chart-card { border: 1px solid var(--line); background: var(--panel); }
 .chart-card.wide { grid-column: 1 / -1; }
 .card__head {
@@ -1208,6 +1219,69 @@ textarea.input { resize: vertical; line-height: 1.5; }
 }
 
 /* χαμηλή οθόνη: μικρότερες φούσκες */
+/* ---------------- ΚΙΝΗΤΟ: η μπάρα πρέπει να χωράει ----------------
+   Χωρίς αυτό το ☰ έβριζε εκτός οθόνης στα 390px και το μενού
+   ήταν απρόσιτο. Κρύβουμε τα εικονίδια της πλοήγησης και το LIVE. */
+@media (max-width: 640px) {
+  .topbar {
+    height: 58px;
+    gap: .45rem;
+    padding: 0 10px;
+    overflow: hidden;
+  }
+  .brand-lockup { flex: 0 0 auto; }
+  .brand-lockup > div:not(.brand-mark) { display: none; }
+  .brand-mark.small { width: 30px; height: 30px; font-size: 17px; }
+  .topnav {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .topnav::-webkit-scrollbar { display: none; }
+  .topnav button {
+    flex: 0 0 auto;
+    height: 34px;
+    padding: 0 .45rem;
+    font-size: .72rem;
+    letter-spacing: .02em;
+  }
+  .topnav svg { display: none; }
+  .live-pill { display: none; }
+  .topbar__right { flex: 0 0 auto; }
+}
+
+/* στο κινητό το ταμπλό στοιβάγεται: όνομα από πάνω, σκορ από κάτω */
+@media (max-width: 640px) {
+  .score-ribbon { min-height: 0; padding: 10px 10px 12px; }
+  .ribbon-team {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+  }
+  .ribbon-team--them { flex-direction: column; }
+  .ribbon-name,
+  .ribbon-team--them .ribbon-name {
+    flex: 0 0 auto; width: 100%;
+    text-align: center;
+    font-size: .78rem;
+    letter-spacing: .06em;
+  }
+  .ribbon-score { gap: .7rem; }
+  .ribbon-score strong { font-size: 2.1rem; min-width: 48px; }
+  .score-center {
+    padding: 0 .5rem;
+    gap: 4px;
+    border-left: 0;
+    border-right: 0;
+  }
+  .score-center span { font-size: .56rem; }
+  .score-center b { font-size: .7rem; line-height: 1; }
+}
+
 @media (max-width: 420px) {
   .court-player__bubble { width: 60px; height: 60px; }
   .court-player .position-badge { font-size: .68rem; }
@@ -1215,5 +1289,4 @@ textarea.input { resize: vertical; line-height: 1.5; }
   .opp-slot { width: 36px; height: 36px; }
   .court-half--them { min-height: 66px; padding: 12px 5%; }
   .court-half--us { min-height: 250px; padding: 20px 5%; }
-  .team-score strong { font-size: 2.1rem; }
 }
