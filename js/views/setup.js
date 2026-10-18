@@ -435,6 +435,9 @@
     var used = {};
     for (var z = 1; z <= 6; z++) used[order[z]] = true;
 
+    var server = opts.server === 'them' ? 'them' : 'us';
+    var onServer = opts.onServer || function () { };
+
     var missing = [];
     var court = el('div', { class: 'lc' });
 
@@ -469,13 +472,22 @@
         onChange();
       });
 
+      /* ζώνη + θέση: π.χ. «1S», «4OPP». Στη ζώνη 1 γράφουμε αν
+         σερβίρουμε εμείς ή αν έχουμε υποδοχή. */
+      var zoneTag = extra ? null : (zone === 1
+        ? el('span', {
+          class: 'lc__serve' + (server === 'them' ? ' lc__serve--rec' : ''),
+          text: server === 'them' ? 'ΥΠΟΔΟΧΗ' : 'ΣΕΡΒΙΣ'
+        })
+        : null);
+
       return el('label', {
         class: 'lc__cell' + (matches.length ? '' : ' lc__cell--empty') + (extra ? ' lc__cell--reserve' : '')
       }, [
         el('span', { class: 'lc__zone', title: C.ZONE_NAMES[zone] || '' }, [
           el('span', { class: 'lc__zonen', text: extra ? '' : String(zone) }),
-          el('span', { class: 'lc__slot', text: slotLabel(slotId) }),
-          el('span', { class: 'slot-count', text: String(matches.length) })
+          el('span', { class: 'lc__slot', text: slotLabel(slotId, extra) }),
+          zoneTag
         ]),
         sel
       ]);
@@ -501,6 +513,37 @@
 
     box.appendChild(court);
 
+    /* Ποιος σερβίρει πρώτος. Με «Υποδοχή» ο S δεν είναι στη ζώνη 1
+       σαν σερβιέρ, αλλά η ζώνη 1 παραμένει η πίσω δεξιά. */
+    var seg = el('div', { class: 'seg seg--fill' });
+    [{ id: 'us', label: 'ΣΕΡΒΙΣ', hint: 'ξεκινάμε εμείς' },
+     { id: 'them', label: 'ΥΠΟΔΟΧΗ', hint: 'ξεκινάνε αυτοί' }].forEach(function (o) {
+      seg.appendChild(el('button', {
+        class: 'seg__btn' + (server === o.id ? ' is-active' : ''),
+        onclick: function () {
+          server = o.id;
+          opts.server = server;          /* ώστε το ξανασχέδιο να βγάλει τη σωστή ετικέτα */
+          Array.prototype.forEach.call(seg.children, function (b) { b.classList.remove('is-active'); });
+          this.classList.add('is-active');
+          onServer(server);
+          V.ui.buzz(8);
+          renderLineupEditor(box, opts);
+        }
+      }, [
+        el('span', { text: o.label }),
+        el('span', { class: 'seg__btn__sub', text: o.hint })
+      ]));
+    });
+
+    box.appendChild(el('div', { class: 'startpick sticky' }, [
+      el('span', { class: 'sticky__label', text: 'Ποιος ξεκινάει το σετ' }),
+      seg,
+      el('span', {
+        class: 'field__hint',
+        text: 'Με «Υποδοχή» δεν περιστρέφεται κανείς — η ομάδα μένει όπως είναι μέχρι να κερδίσει τον πόντο του υποδοχής.'
+      })
+    ]));
+
     if (missing.length) {
       box.appendChild(el('p', { class: 'field__hint', text: 'Κανένας παίκτης για: ' + missing.join(', ') }));
     }
@@ -519,12 +562,17 @@
     ]));
   }
 
-  /* ετικέτα θέσης: κρατάμε το νούμερο όταν ξεχωρίζει τον ενεργό
-     από τον δεύτερο (ΜΒ1/ΜΒ2, L/L2) */
-  function slotLabel(slotId) {
-    if (slotId === 'MB1') return 'MB1';
-    if (slotId === 'MB2') return 'MB2';
-    if (slotId === 'L2') return 'L2';
+  /* ετικέτα θέσης στο γήπεδο: μόνο η θέση, χωρίς αρίθμη («1S», «3MB»).
+   Στους εναλλάκτες κρατάμε τον αριθμό («ΜΒ1», «L2») για να
+   ξεχωρίζουν τον ενεργό από τον δεύτερο. */
+  function slotLabel(slotId, keepNo) {
+    if (keepNo) {
+      if (slotId === 'MB1' || slotId === 'MB2') return slotId;
+      if (slotId === 'L2') return 'L2';
+    } else {
+      var bare = String(slotId).replace(/[12]$/, '');
+      if (bare !== slotId) return bare;
+    }
     var s = V.byId(C.COURT_SLOTS, slotId);
     return s ? s.label : slotId;
   }
@@ -588,10 +636,15 @@
     var box = el('div', { class: 'lineup-box' });
     var sw = el('div', { class: 'lineup-actions' });
 
+    /* ποιος σερβίρει — το κρατάμε εδώ για να το σώσουμε μαζί με την ενδέκη */
+    var startServer = V.Store.game(m, set).server === 'them' ? 'them' : 'us';
+
     var opts = {
       roster: draft.roster,
       order: order,
       state: state,
+      server: startServer,
+      onServer: function (v) { startServer = v; },
       onChange: function () { renderSw(); }
     };
     renderLineupEditor(box, opts);
@@ -645,7 +698,12 @@
           variant: 'primary',
           onClick: function () {
             V.Store.setLineup(m.id, set, state);
-            V.ui.toast('Ενδέκη Σετ ' + set + ' αποθηκεύτηκε', { tone: 'good' });
+            /* και «ποιος σερβίρει» μαζί — το enforceLiberoRule του
+               store κινεί αυτόματα τον MB αν χρειαστεί */
+            V.Store.setGame(m.id, set, { server: startServer });
+            V.ui.toast('Ενδέκη Σετ ' + set + ' αποθηκεύτηκε · ' +
+              (startServer === 'them' ? 'ξεκινάμε με υποδοχή' : 'ξεκινάμε με σερβίς'),
+              { tone: 'good' });
           }
         }
       ]

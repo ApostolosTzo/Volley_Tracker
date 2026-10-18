@@ -25,11 +25,13 @@
     var m = ctx.match;
     var set = ctx.set;
     var zone = 1;
+    var startServer = (opts.server === 'them') ? 'them' : 'us';
     var dlg = null;
 
     var zoneBox = el('div', { class: 'startset__zones' });
     var zoneBtns = {};
     [4, 3, 2, 5, 6, 1].forEach(function (z) {
+      var isSrv = (z === 1);
       var b = el('button', {
         class: 'zbtn' + (z === zone ? ' is-active' : ''),
         title: 'Ζώνη ' + z + ' — ' + C.ZONE_NAMES[z],
@@ -40,14 +42,49 @@
         }
       }, [
         el('span', { class: 'zbtn__n', text: String(z) }),
-        el('span', { class: 'zbtn__t', text: z === 1 ? 'ΣΕΡΒΙΣ' : 'S' })
+        el('span', {
+          class: 'zbtn__t' + (isSrv && startServer === 'them' ? ' zbtn__t--rec' : ''),
+          text: isSrv ? (startServer === 'them' ? 'ΥΠΟΔΟΧΗ' : 'ΣΕΡΒΙΣ') : 'S'
+        })
       ]);
       zoneBtns[z] = b;
       zoneBox.appendChild(b);
     });
 
+    /* Ποιος ξεκινάει το σετ: σερβίς ή υποδοχή. */
+    var seg = el('div', { class: 'seg seg--fill' });
+    function redrawZoneLabels() {
+      var t = zoneBtns[1].querySelector('.zbtn__t');
+      t.textContent = startServer === 'them' ? 'ΥΠΟΔΟΧΗ' : 'ΣΕΡΒΙΣ';
+      t.classList.toggle('zbtn__t--rec', startServer === 'them');
+    }
+    [{ id: 'us', label: 'ΣΕΡΒΙΣ', hint: 'ξεκινάμε εμείς' },
+     { id: 'them', label: 'ΥΠΟΔΟΧΗ', hint: 'ξεκινάνε αυτοί' }].forEach(function (o) {
+      seg.appendChild(el('button', {
+        class: 'seg__btn' + (startServer === o.id ? ' is-active' : ''),
+        onclick: function () {
+          startServer = o.id;
+          Array.prototype.forEach.call(seg.children, function (b) { b.classList.remove('is-active'); });
+          this.classList.add('is-active');
+          redrawZoneLabels();
+          V.ui.buzz(8);
+        }
+      }, [
+        el('span', { text: o.label }),
+        el('span', { class: 'seg__btn__sub', text: o.hint })
+      ]));
+    });
+
     var body = el('div', { class: 'form' }, [
-      el('p', { class: 'startset__intro', text: opts.title || 'Πού είναι ο παίκτης σερβίς στην αρχή του σετ;' }),
+      el('p', { class: 'startset__intro', text: opts.title || 'Πώς ξεκινάει το σετ;' }),
+      el('div', { class: 'startpick sticky' }, [
+        el('span', { class: 'sticky__label', text: 'Ποιος ξεκινάει το σετ' }),
+        seg,
+        el('span', {
+          class: 'field__hint',
+          text: 'Με «Υποδοχή» δεν περιστρέφεται κανείς — η ομάδα μένει όπως είναι μέχρι να κερδίσει τον πόντο του υποδοχής.'
+        })
+      ]),
       el('div', { class: 'sticky' }, [
         el('span', { class: 'sticky__label', text: 'Ζώνη παίκτη σερβίς' }),
         zoneBox,
@@ -68,14 +105,18 @@
           label: 'Παίξε!', variant: 'primary',
           onClick: function () {
             V.Store.setGame(m.id, set, {
-              server: 'us',
+              server: startServer,
               order: C.orderForSetterZone(zone),
               rotations: 0,
               servingPlayerId: null
             });
             ctx.flow = null;
             V.ui.buzz(20);
-            V.ui.toast('Σετ ' + set + ' · S στη ζώνη ' + zone + ' · σερβίρουμε εμείς', { tone: 'good' });
+            V.ui.toast(
+              'Σετ ' + set + ' · S στη ζώνη ' + zone + ' · ' +
+              (startServer === 'them' ? 'ξεκινάμε με υποδοχή' : 'σερβίρουμε εμείς'),
+              { tone: 'good' }
+            );
           }
         }
       ]

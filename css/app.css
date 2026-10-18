@@ -1080,7 +1080,108 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .pill.is-on { color: var(--ink); background: var(--acid); border-color: var(--acid); }
 
 /* =============================================================
- * ΜΕΝΟΥ
+ * ΕΝΔΕΚΗ ΣΕ ΣΧΗΜΑ ΓΗΠΕΔΟΥ
+ * ============================================================= */
+.lineup-box { display: flex; flex-direction: column; gap: .7rem; }
+
+.lc {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  padding: 5px;
+}
+.lc__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.lc__net {
+  display: grid; place-items: center;
+  height: 16px; margin: 5px 0;
+  border-top: 2px dashed var(--line-2);
+  border-bottom: 2px dashed var(--line-2);
+}
+.lc__net span { color: var(--dim); font: 800 .5rem var(--font-cond); letter-spacing: .22em; }
+
+.lc__cell {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 6px 7px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.lc__cell--empty { border-color: rgba(251, 191, 36, .5); }
+.lc__cell--reserve { background: rgba(255, 255, 255, .02); }
+.lc__cell .input { min-height: 36px; padding: .4rem .5rem; font-size: .78rem; }
+.lc__cell--reserve .input { min-height: 32px; font-size: .74rem; }
+
+/* ζώνη + θέση: π.χ. «1S», «4OPP» */
+.lc__zone { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.lc__zonen {
+  min-width: 9px;
+  color: var(--acid); font: 800 .72rem var(--font-cond);
+}
+.lc__slot {
+  color: var(--muted);
+  font: 700 .64rem var(--font-cond);
+  letter-spacing: .06em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ετικέτα ποιος σερβίρει στη ζώνη 1 */
+.lc__serve {
+  margin-left: auto;
+  padding: 1px 4px;
+  color: var(--ink); background: var(--acid);
+  font: 800 .5rem var(--font); letter-spacing: .08em;
+  white-space: nowrap;
+}
+.lc__serve--rec { background: var(--blue); }
+
+/* όσοι έμειναν εκτός γηπέδου */
+.lc__rest {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px;
+  margin-top: 5px; padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+.lc__restlbl {
+  grid-column: 1 / -1;
+  color: var(--dim);
+  font: 800 .56rem var(--font); letter-spacing: .14em; text-transform: uppercase;
+}
+
+.lineup-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-top: .7rem; }
+.swapbox { display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem; border: 1px solid var(--line); background: var(--panel-2); }
+.swapbox .sticky__label { margin: 0; }
+.swapbox__val { flex: 1; font-weight: 700; font-size: .84rem; }
+
+/* επιλογή ποιος ξεκινάει το σετ */
+.startpick { display: flex; flex-direction: column; gap: 5px; }
+.startpick .seg--fill button { min-height: 42px; font-size: .8rem; letter-spacing: .06em; }
+.startpick .seg__btn small {
+  display: block; font-size: .56rem; font-weight: 600; opacity: .75; letter-spacing: 0;
+}
+
+/* =============================================================
+ * ΡΥΘΜΙΣΗ ΣΕΤ (dialog)
+ * ============================================================= */
+.startset__intro { color: var(--muted); font-size: .84rem; }
+.startset__zones {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  padding: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+}
+.zbtn {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: .5rem .2rem;
+  border: 1px solid transparent; border-radius: 3px;
+  color: var(--muted);
+}
+.zbtn:hover { color: var(--text); }
+.zbtn__n { font: 700 1.05rem/1 var(--font-cond); }
+.zbtn__t { font: 800 .5rem var(--font); letter-spacing: .1em; }
+.zbtn.is-active { color: var(--ink); background: var(--acid); border-color: var(--acid); }
+.zbtn__t--rec { color: var(--blue); }
+.zbtn.is-active .zbtn__t--rec { color: var(--ink); }
+
+/* =============================================================
+ * ΜΕΝΟΥ / ΔΙΑΛΟΓΟΙ
  * ============================================================= */
 .menu { display: flex; flex-direction: column; gap: 1px; background: var(--line); }
 .menu__item {
