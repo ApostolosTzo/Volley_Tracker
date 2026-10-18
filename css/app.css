@@ -503,12 +503,20 @@ button:disabled { cursor: not-allowed; opacity: .38; }
 
 .event-row {
   display: flex; align-items: flex-start; gap: .6rem;
+  width: 100%;
   padding: .6rem 16px;
+  border: 0;
+  background: none;
+  text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, .045);
+  transition: background .14s;
 }
+.event-row:hover { background: rgba(255, 255, 255, .04); }
+.event-row:hover > i { transform: scale(1.25); }
 .event-row > i {
   width: 8px; height: 8px; margin-top: .4rem;
   border-radius: 50%; flex: 0 0 auto;
+  transition: transform .14s;
 }
 .event-row > div { flex: 1; min-width: 0; }
 .event-row strong { display: block; font-size: .82rem; font-weight: 700; }

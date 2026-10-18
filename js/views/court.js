@@ -347,8 +347,12 @@
     var dlg = null;
 
     function log(kind, r) {
-      /* η ροή μπαίνει πριν το addEvent (το addEvent κάνει render) */
-      ctx.flow = null;
+      /* saved / block_saved → σώσαμε τη μπάλα, δεν έγινε πόντος:
+         συνεχίζουμε με επίθεση (επόμενο πάτημα = ο χτυπητής).
+         Το αποτέλεσμα μπαίνει ΠΡΙΝ το addEvent, γιατί το addEvent κάνει render. */
+      var continueRally = (r.id === 'saved' || r.id === 'block_saved');
+      ctx.flow = continueRally ? { stage: 'pick-attacker' } : null;
+
       var ev = V.Store.addEvent(m.id, {
         set: ctx.set, type: 'attack',
         playerId: attackerId, kind: kind, result: r.id
@@ -357,7 +361,7 @@
       if (side) V.Store.awardPoint(m.id, ctx.set, side, 1);
 
       if (dlg) dlg.close();
-      scrollToCourt();
+      if (!continueRally) scrollToCourt();
       V.ui.buzz(side ? 20 : 10);
       V.ui.toast(
         attacker + ' · ' + (kind === 'tip' ? 'Tip' : 'Spike') + ' · ' + r.label +
@@ -716,7 +720,11 @@
       shown.forEach(function (e) {
         var p = e.playerId ? V.Store.player(m, e.playerId) : null;
         var color = (V.app.CAT_COLOR && V.app.CAT_COLOR[e.type]) || '#84909f';
-        feed.appendChild(el('article', { class: 'event-row' }, [
+        feed.appendChild(el('button', {
+          class: 'event-row',
+          title: 'Πάτα για επεξεργασία',
+          onclick: function () { V.views.dashboard.editEvent(ctx, e); }
+        }, [
           el('i', { style: 'background:' + color }),
           el('div', {}, [
             el('strong', {}, [

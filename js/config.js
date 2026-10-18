@@ -324,7 +324,8 @@
   var AUTO_SCORE = {
     attack: function (e) {
       if (e.result === 'point') return 'us';        // μπήκε ο πόντος
-      if (e.result === 'block_saved') return 'us';  // μπλόκαραν κι εμείς σώσαμε τη μπάλα
+      /* saved / block_saved: μπλόκαραν ή σώσαμε τη μπάλα, αλλά δεν έγινε
+         πόντος — συνεχίζουμε με επίθεση (δεν δίνει σκόρ εδώ) */
       if (e.result === 'blocked' || e.result === 'out') return 'them';
       return null;
     },

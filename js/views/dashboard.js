@@ -587,7 +587,10 @@ function renderTimeline(ctx) {
           label: 'Αποθήκευση',
           variant: 'primary',
           onClick: function () {
-            V.Store.updateEvent(ctx.match.id, e.id, {
+            /* αν άλλαξε το αποτέλεσμα, μπορεί να άλλαξε και σε ποιον
+               πηγαίνει ο πόντος (π.χ. Point → Blocked). Διορθώνουμε το
+               σκόρ ώστε να μην μείνει ασυνέπειο με τα στατιστικά. */
+            var patch = {
               playerId: pSel.value || null,
               kind: draft.kind, result: draft.result,
               target: draft.target,
@@ -595,8 +598,20 @@ function renderTimeline(ctx) {
               issues: body._issues || draft.issues || [],
               text: body._note ? body._note.value : (e.type === 'note' ? draft.text : draft.text),
               set: Number(setSel.value)
-            });
-            V.ui.toast('Ενημερώθηκε', { tone: 'good' });
+            };
+            if (ctx.match.autoScore !== false) {
+              var oldSide = C.scoreSideFor(e);
+              var newSide = C.scoreSideFor(Object.assign({}, e, patch));
+              var dUs = (newSide === 'us' ? 1 : 0) - (oldSide === 'us' ? 1 : 0);
+              var dThem = (newSide === 'them' ? 1 : 0) - (oldSide === 'them' ? 1 : 0);
+              if (dUs) V.Store.awardPoint(ctx.match.id, e.set, 'us', dUs);
+              if (dThem) V.Store.awardPoint(ctx.match.id, e.set, 'them', dThem);
+            }
+            V.Store.updateEvent(ctx.match.id, e.id, patch);
+            V.ui.toast(
+              (dUs || dThem) ? 'Ενημερώθηκε · το σκόρ διορθώθηκε' : 'Ενημερώθηκε',
+              { tone: 'good' }
+            );
           }
         }
       ]
@@ -639,6 +654,7 @@ function renderTimeline(ctx) {
       ]);
       return wrap;
     },
-    renderTimeline: renderTimeline
+    renderTimeline: renderTimeline,
+    editEvent: editEvent
   };
 })(window.V = window.V || {});
