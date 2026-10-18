@@ -270,6 +270,8 @@ button:disabled { cursor: not-allowed; opacity: .38; }
 .volley-court {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
   border: 1px solid rgba(255, 255, 255, .13);
   /* ξύλινο πάτωμα γηπέδου */
   background:
@@ -297,20 +299,26 @@ button:disabled { cursor: not-allowed; opacity: .38; }
   position: relative; z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
   gap: 1px;
-  min-height: 230px;
-  padding: 22px 7%;
   background-repeat: no-repeat;
 }
-/* γραμμή επίθεσης (attack line) — 3 μέτρα από τη φιλέ */
+
+/* η αντίπαλη πλευρά — μικρή στριπ, μόνο η μπροστά γραμμή */
 .court-half--them {
-  background-color: #c69a67;
-  background-image: linear-gradient(rgba(255, 253, 248, .9) 2px, transparent 2px);
-  background-position: 0 66.667%;
-  background-size: 100% 2px;
+  flex: 0 0 auto;
+  grid-template-rows: 1fr;
+  min-height: 82px;
+  padding: 16px 7%;
+  background-color: #c0965f;
 }
+
+/* η δική μας πλευρά — εδώ πάει όλος ο χώρος
+   (γραμμή επίθεσης 3 μέτρα από τη φιλέ) */
 .court-half--us {
+  flex: 1 1 auto;
+  grid-template-rows: repeat(2, 1fr);
+  min-height: 300px;
+  padding: 28px 7%;
   background-color: #d5a976;
   background-image: linear-gradient(rgba(255, 253, 248, .9) 2px, transparent 2px);
   background-position: 0 33.333%;
@@ -329,9 +337,9 @@ button:disabled { cursor: not-allowed; opacity: .38; }
 
 /* φιλέ — σκούρο πλέγμα με λεπτές λευκές κόρδες και λευκές ταινίες πάνω-κάτω */
 .net {
-  position: absolute; z-index: 4; top: 50%; right: 0; left: 0;
+  position: relative; z-index: 4;
+  flex: 0 0 auto;
   height: 22px;
-  transform: translateY(-50%);
   background:
     /* οι λεπτές οριζόντιες κόρδες του πλέγματος */
     repeating-linear-gradient(0deg,
@@ -365,75 +373,75 @@ button:disabled { cursor: not-allowed; opacity: .38; }
   font: 800 .44rem var(--font-cond); letter-spacing: .2em;
 }
 
-/* αντίπαλοι — απλοί κύκλοι με τη ζώνη */
+/* αντίπαλοι — τρεις απλοί σκούροι κύκλοι, χωρίς νούμερα */
 .opp-slot {
   align-self: center; justify-self: center;
-  display: grid; place-items: center;
-  width: 54px; height: 54px;
-  color: #81909f;
-  border: 1px solid #566473;
+  width: 44px; height: 44px;
+  border: 1px solid rgba(38, 52, 66, .8);
   border-radius: 50%;
-  background: #26323e;
-  font: 600 13px var(--font-cond);
+  background: rgba(28, 38, 50, .62);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .28);
 }
 
-/* δικοί μας */
+/* δικοί μας — ο κύκλος έχει τη θέση, το όνομα είναι από κάτω */
 .court-player {
   align-self: center; justify-self: center;
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.court-player__bubble {
   position: relative;
   display: grid; place-items: center;
-  width: 96px; height: 96px;
-  padding: 12px 6px;
+  width: 72px; height: 72px;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .18);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #2d3b49, #111820 70%);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, .3);
+  background: radial-gradient(circle at 35% 28%, #33455a, #0d131b 72%);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .38);
   transition: transform .16s, border-color .16s, box-shadow .16s;
 }
-.court-player:hover:not(:disabled) {
+.court-player:hover:not(:disabled) .court-player__bubble {
   transform: translateY(-4px);
   border-color: var(--acid);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .35), 0 0 0 5px rgba(201, 243, 29, .06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .4), 0 0 0 5px rgba(201, 243, 29, .07);
 }
-.court-player:active:not(:disabled) { transform: scale(.96); }
+.court-player:active:not(:disabled) .court-player__bubble { transform: scale(.95); }
 .court-player:disabled { opacity: .5; }
 
 .court-player .position-badge {
-  position: absolute; top: -4px;
-  padding: 3px 7px;
-  color: #0a0e13; background: var(--acid);
-  font: 900 9px var(--font); letter-spacing: .06em;
+  font: 800 .78rem var(--font-cond);
+  letter-spacing: .07em;
+  color: var(--acid);
 }
-.court-player strong {
-  max-width: 78px;
-  font: 600 12px/1.15 var(--font-cond);
-  text-align: center; text-transform: uppercase;
-  overflow: hidden; text-overflow: ellipsis;
+.court-player__name {
+  max-width: 92px;
+  font: 600 .66rem/1.15 var(--font-cond);
+  text-align: center;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .9), 0 0 14px rgba(0, 0, 0, .55);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.court-player small {
-  color: #677482; font-size: 7px; letter-spacing: .1em;
-  font-variant-numeric: tabular-nums;
-}
-.court-player__num { color: var(--acid); font-weight: 700; }
 
-.court-player--serving {
+.court-player--serving .court-player__bubble {
   border-color: var(--acid);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .35), 0 0 0 4px rgba(201, 243, 29, .14);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .4), 0 0 0 4px rgba(201, 243, 29, .16);
 }
-.court-player--serving::after {
+.court-player--serving .court-player__bubble::after {
   content: "";
-  position: absolute; top: -10px; right: -6px;
-  width: 14px; height: 14px; border-radius: 50%;
+  position: absolute; top: -5px; right: -3px;
+  width: 13px; height: 13px; border-radius: 50%;
   background: var(--acid);
-  box-shadow: 0 0 12px rgba(201, 243, 29, .7);
+  box-shadow: 0 0 12px rgba(201, 243, 29, .8);
 }
-.court-player--empty {
+.court-player--empty .court-player__bubble {
   border-style: dashed;
-  color: var(--dim);
-  background: transparent;
+  background: rgba(10, 14, 20, .22);
   box-shadow: none;
 }
+.court-player--empty .position-badge { color: rgba(255, 255, 255, .45); }
 
 .court-hint {
   display: flex; align-items: center; gap: .5rem;
@@ -1196,14 +1204,16 @@ textarea.input { resize: vertical; line-height: 1.5; }
 
 @media (min-width: 760px) {
   .topnav button { padding: 0 1.1rem; }
-  .court-half { min-height: 260px; }
+  .court-half--us { min-height: 340px; }
 }
 
 /* χαμηλή οθόνη: μικρότερες φούσκες */
 @media (max-width: 420px) {
-  .court-player { width: 78px; height: 78px; }
-  .court-player strong { font-size: 10px; max-width: 64px; }
-  .opp-slot { width: 42px; height: 42px; }
-  .court-half { min-height: 200px; padding: 16px 5%; }
+  .court-player__bubble { width: 60px; height: 60px; }
+  .court-player .position-badge { font-size: .68rem; }
+  .court-player__name { font-size: .58rem; max-width: 78px; }
+  .opp-slot { width: 36px; height: 36px; }
+  .court-half--them { min-height: 66px; padding: 12px 5%; }
+  .court-half--us { min-height: 250px; padding: 20px 5%; }
   .team-score strong { font-size: 2.1rem; }
 }

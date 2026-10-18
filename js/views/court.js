@@ -110,11 +110,12 @@
     var g = V.Store.game(m, set);
     var ours = V.Store.courtPlayers(m, set);
 
-    /* --- αντίπαλη πλευρά: απλοί κύκλοι με τη ζώνη --- */
-    var opp = el('div', { class: 'court-half court-half--them' }, [4, 3, 2, 5, 6, 1].map(function (z) {
-      return el('div', { class: 'opp-slot', title: 'Αντίπαλος ζώνη ' + z }, [
-        el('span', { text: String(z) })
-      ]);
+    /* --- αντίπαλη πλευρά: μόνο η μπροστά γραμμή (3 κύκλοι, άδειοι) --- */
+    var opp = el('div', {
+      class: 'court-half court-half--them',
+      title: 'Αντίπαλη ομάδα — μπροστά γραμμή'
+    }, [4, 3, 2].map(function () {
+      return el('div', { class: 'opp-slot' });
     }));
 
     /* --- δική μας πλευρά --- */
@@ -124,19 +125,21 @@
       var p = byZone[z] || { zone: z, name: '—', label: '', playerId: null };
       var isServer = (g.server === 'us' && z === C.serverZone());
       var pl = p.playerId ? V.Store.player(m, p.playerId) : null;
-      var num = pl && pl.number != null && pl.number !== '' ? String(pl.number) : '';
+      var num = pl && pl.number != null && pl.number !== '' ? '#' + pl.number + ' · ' : '';
 
       return el('button', {
         class: 'court-player' + (isServer ? ' court-player--serving' : '') +
           (p.playerId ? '' : ' court-player--empty'),
         title: p.playerId
-          ? 'Ζώνη ' + z + ' — ' + (num ? '#' + num + ' ' : '') + p.name
+          ? 'Ζώνη ' + z + ' — ' + num + p.name
           : 'Ζώνη ' + z + ' — κενό (πάτα για ενδέκη)',
+        'aria-label': p.playerId ? p.label + ' ' + p.name : 'Ζώνη ' + z + ' κενό',
         onclick: function () { onCourtTap(ctx, p); }
       }, [
-        el('span', { class: 'position-badge', text: p.label || '—' }),
-        el('strong', { text: shortName(p.name) }),
-        el('small', { text: (num ? '#' + num + ' ' : '') + 'ΘΕΣΗ ' + z })
+        el('span', { class: 'court-player__bubble' }, [
+          el('span', { class: 'position-badge', text: p.label || '—' })
+        ]),
+        el('span', { class: 'court-player__name', text: shortName(p.name) })
       ]);
     }));
 
@@ -150,8 +153,8 @@
   /* κοντεύεις όνομα ώστε να χωράει στον κύκλο */
   function shortName(n) {
     var s = String(n || '—');
-    if (s.length <= 11) return s;
-    return s.slice(0, 10) + '…';
+    if (s.length <= 14) return s;
+    return s.slice(0, 13) + '…';
   }
 
   /* =========================================================
