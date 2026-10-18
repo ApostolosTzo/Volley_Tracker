@@ -1,5 +1,11 @@
 Add-Type -AssemblyName System.Drawing
 
+# ---------------------------------------------------------------
+# Volley Tracker — εικονίδια εφαρμογής
+# Ίδιο brand mark με την εφαρμογή: λαμπινο τετράγωνο με κεκλινή V,
+# στο σκούρο #080c11. Χωρίς εξωτερικές εξαρτήσεις.
+# ---------------------------------------------------------------
+
 function New-VolleyIcon {
   param(
     [int]$Size,
@@ -9,59 +15,82 @@ function New-VolleyIcon {
 
   $bmp = New-Object System.Drawing.Bitmap $Size, $Size
   $g = [System.Drawing.Graphics]::FromImage($bmp)
-  $g.SmoothingMode = 'AntiAlias'
-  $g.Clear([System.Drawing.ColorTranslator]::FromHtml('#0d1220'))
+  $g.SmoothingMode    = 'AntiAlias'
+  $g.InterpolationMode = 'HighQualityBicubic'
+  $g.PixelOffsetMode  = 'HighQuality'
+  $g.TextRenderingHint = 'AntiAliasGridFit'
 
-  if ($Maskable) {
-    $pad = [float]($Size * 0.10)
-  } else {
-    $pad = [float]($Size * 0.045)
-  }
+  $INK   = [System.Drawing.ColorTranslator]::FromHtml('#080c11')
+  $ACID  = [System.Drawing.ColorTranslator]::FromHtml('#c9f31d')
+  $ACID2 = [System.Drawing.ColorTranslator]::FromHtml('#d6ff35')
+  # ΠΡΟΣΟΧΗ: στην PowerShell τα ονόματα δεν έχουν διάκριση πεζών —
+  # το $shadowColor και το $shadowPath πρέπει να είναι διαφορετικά.
+  $shadowColor = [System.Drawing.Color]::FromArgb(46, 201, 243, 29)   # ανοιχτό lime
+
+  $g.Clear($INK)
+
+  # ασφαλής περιθώριο: το maskable κόβεται σε κύκλο
+  if ($Maskable) { $pad = [float]($Size * 0.16) }
+  else           { $pad = [float]($Size * 0.115) }
 
   $d = [float]($Size - 2 * $pad)
   $cx = [float]($Size / 2)
   $cy = [float]($Size / 2)
 
-  $accent = [System.Drawing.ColorTranslator]::FromHtml('#4c8dff')
-  $light  = [System.Drawing.ColorTranslator]::FromHtml('#eaf0ff')
-  $green  = [System.Drawing.ColorTranslator]::FromHtml('#2ee6a8')
+  # κεκλίνηση -9° όπως το brand-mark στο CSS (skew(-8deg))
+  $tan = [Math]::Tan(9.0 * [Math]::PI / 180.0)
 
-  # σφαίρα
-  $brush = New-Object System.Drawing.SolidBrush $accent
-  $g.FillEllipse($brush, $pad, $pad, $d, $d)
+  # σημείο σε μονάδα (-0.5..0.5) με εφαρμοσμένη την κεκλίνηση
+  function P([double]$x, [double]$y) {
+    [System.Drawing.PointF]::new(
+      [float]($cx + ($x - $y * $tan) * $d),
+      [float]($cy + $y * $d)
+    )
+  }
 
-  # λευκές ραφές μπάλας (3 καμπύλες που διασχίζουν το κέντρο)
-  $pen = New-Object System.Drawing.Pen $light, ([float]($Size * 0.030))
+  # --- σκιά: ίδιο τετράγωνο, μετατοπισμένο κάτω-δεξιά ---
+  $off = [float]($Size * 0.045)
+  $shadowPath = [System.Drawing.Drawing2D.GraphicsPath]::new()
+  $shadowPath.AddPolygon([System.Drawing.PointF[]]@(
+    (P -0.5 -0.5), (P 0.5 -0.5), (P 0.5 0.5), (P -0.5 0.5)
+  ))
+  $mtx = New-Object System.Drawing.Drawing2D.Matrix
+  $mtx.Translate([float]$off, [float]$off)
+  $shadowPath.Transform($mtx)
+  $shadowBrush = New-Object System.Drawing.SolidBrush $shadowColor
+  $g.FillPath($shadowBrush, $shadowPath)
+
+  # --- το τετράγωνο ---
+  $sq = [System.Drawing.Drawing2D.GraphicsPath]::new()
+  $sq.AddPolygon([System.Drawing.PointF[]]@(
+    (P -0.5 -0.5), (P 0.5 -0.5), (P 0.5 0.5), (P -0.5 0.5)
+  ))
+  $grad = New-Object System.Drawing.Drawing2D.LinearGradientBrush (
+    (P -0.5 -0.5),
+    (P 0.5 0.5),
+    $ACID,
+    $ACID2
+  )
+  $g.FillPath($grad, $sq)
+
+  # --- το V μέσα (σκούρο, ίδιο χρώμα με το φόντο) ---
+  $v = [System.Drawing.Drawing2D.GraphicsPath]::new()
+  $v.AddLine((P -0.265 -0.215), (P -0.005 0.290))
+  $v.AddLine((P -0.005  0.290), (P  0.255 -0.215))
+
+  $stroke = [float]($d * 0.135)
+  $pen = New-Object System.Drawing.Pen $INK, $stroke
   $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
   $pen.EndCap   = [System.Drawing.Drawing2D.LineCap]::Round
-
-  # καμπύλη Α: κατακόρυφο "σπίτι" (δύο κοίλες)
-  $g.DrawArc($pen, [float]($cx - $d * 0.30), [float]($cy - $d * 0.50), [float]($d * 0.60), $d, 0, 180)
-  $g.DrawArc($pen, [float]($cx - $d * 0.30), [float]($cy - $d * 0.50), [float]($d * 0.60), $d, 180, 180)
-
-  # καμπύλη Β: οριζόντια "μπουγαζάκι"
-  $g.DrawArc($pen, [float]($cx - $d * 0.50), [float]($cy - $d * 0.30), $d, [float]($d * 0.60), 180, 180)
-  $g.DrawArc($pen, [float]($cx - $d * 0.50), [float]($cy - $d * 0.30), $d, [float]($d * 0.60), 0, 180)
-
-  # καμπύλη Γ: κεντρική οριζόντια
-  $g.DrawLine($pen, [float]($cx - $d * 0.42), $cy, [float]($cx + $d * 0.42), $cy)
-
-  # λευκό περίγραμμα
-  $ring = New-Object System.Drawing.Pen $light, ([float]($Size * 0.024))
-  $g.DrawEllipse($ring, $pad, $pad, $d, $d)
-
-  # πράσινο σημάδι "point"
-  $r = [float]($Size * 0.085)
-  $g2brush = New-Object System.Drawing.SolidBrush $green
-  $g.FillEllipse($g2brush, [float]($cx + $d * 0.19), [float]($cy - $d * 0.31), $r, $r)
-  $dotRing = New-Object System.Drawing.Pen ([System.Drawing.ColorTranslator]::FromHtml('#0d1220')), ([float]($Size * 0.012))
-  $g.DrawEllipse($dotRing, [float]($cx + $d * 0.19), [float]($cy - $d * 0.31), $r, $r)
+  $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+  $g.DrawPath($pen, $v)
 
   $dir = Split-Path -Parent $Path
   if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
   $bmp.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
 
-  $pen.Dispose(); $ring.Dispose(); $brush.Dispose(); $g2brush.Dispose(); $dotRing.Dispose()
+  $pen.Dispose(); $grad.Dispose(); $v.Dispose(); $sq.Dispose()
+  $shadowBrush.Dispose(); $shadowPath.Dispose(); $mtx.Dispose()
   $g.Dispose(); $bmp.Dispose()
   Write-Host "OK $Path ($Size x $Size)"
 }
