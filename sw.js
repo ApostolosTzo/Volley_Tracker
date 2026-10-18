@@ -1,7 +1,7 @@
 /* =============================================================
  * sw.js — offline cache (app shell)
  * ============================================================= */
-const CACHE = 'volley-tracker-v6';
+const CACHE = 'volley-tracker-v7';
 
 const ASSETS = [
   './',
@@ -24,10 +24,17 @@ const ASSETS = [
   './icons/icon-512.png'
 ];
 
+/* Κατά την εγκατάσταση κάνουμε ΠΑΝΤΑ fetch με cache:'reload'.
+   Χωρίς αυτό το browser μπορεί να σερβίρει το παλιό αρχείο από το HTTP
+   cache (GitHub Pages βάζει max-age) και η νέα cache γεμίζει με παλιό
+   περιεχόμενο — τότε η ενημέρωση δεν φαίνεται ποτέ. */
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
-      .then((c) => Promise.allSettled(ASSETS.map((a) => c.add(a))))
+      .then((c) => Promise.allSettled(
+        ASSETS.map((a) => fetch(new Request(a, { cache: 'reload' }))
+          .then((res) => (res && res.ok ? c.put(a, res) : null)))
+      ))
       .then(() => self.skipWaiting())
   );
 });
