@@ -1,7 +1,7 @@
 /* =============================================================
  * sw.js — offline cache (app shell)
  * ============================================================= */
-const CACHE = 'volley-tracker-v3';
+const CACHE = 'volley-tracker-v4';
 
 const ASSETS = [
   './',

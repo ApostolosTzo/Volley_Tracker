@@ -290,22 +290,42 @@ button:disabled { cursor: not-allowed; opacity: .38; }
 .court-half--them { background-color: #131b25; }
 .court-half--us { background-color: #18222e; }
 
-/* φιλέ — απόλυτα στη μέση πάνω από τις δύο σειρές */
+/* φιλέ — σκούρο πλέγμα με λεπτές λευκές κόρδες και λευκές ταινίες πάνω-κάτω */
 .net {
   position: absolute; z-index: 4; top: 50%; right: 0; left: 0;
-  height: 12px;
+  height: 22px;
   transform: translateY(-50%);
   background:
-    repeating-linear-gradient(90deg, #dbe1e6 0 2px, transparent 2px 8px), #6b7580;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, .6);
+    /* οι λεπτές οριζόντιες κόρδες του πλέγματος */
+    repeating-linear-gradient(0deg,
+      rgba(255, 255, 255, .45) 0 1px,
+      transparent 1px 6px),
+    /* οι κατακόρυφες κόρδες */
+    repeating-linear-gradient(90deg,
+      rgba(255, 255, 255, .30) 0 1px,
+      transparent 1px 6px),
+    #0f151d;
+  border-top: 4px solid #eef2f6;
+  border-bottom: 4px solid #eef2f6;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .6);
 }
+/* οι λευκές κορυφές στα άκρα (αντέννα) */
+.net::before,
+.net::after {
+  content: '';
+  position: absolute; top: -4px; bottom: -4px; width: 7px;
+  background: linear-gradient(90deg, #ffffff, #c3ccd6);
+  opacity: .9;
+}
+.net::before { left: 0; }
+.net::after { right: 0; }
 .net span {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  padding: 0 .4rem;
-  background: #6b7580;
-  color: #10151b;
-  font: 800 .5rem var(--font-cond); letter-spacing: .22em;
+  padding: 1px .35rem;
+  background: rgba(238, 242, 246, .92);
+  color: #0d1218;
+  font: 800 .44rem var(--font-cond); letter-spacing: .2em;
 }
 
 /* αντίπαλοι — απλοί κύκλοι με τη ζώνη */
