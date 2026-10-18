@@ -643,7 +643,7 @@
           var set = V.Store.currentSet(m);
           var g = V.Store.game(m, set);
           V.Store.setGame(m.id, set, {
-            order: C.rotateOrder(g.order, 1),
+            order: C.rotateOrder(g.order, 1, g.server),
             rotations: (g.rotations || 0) + 1
           });
           V.ui.buzz(14);

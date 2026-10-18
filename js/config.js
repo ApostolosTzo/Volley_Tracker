@@ -156,55 +156,97 @@
    * Όταν μετά το επόμενο rotation ο MB ξαναβγαίνει μπροστά, τότε
    * αντί για δεύτερο κεντρικό μπαίνει ο λιμπέρω — όπως σε αγώνα.
    */
-  function enforceLiberoRule(order) {
+  var FRONT_ZONES = [4, 3, 2];
+  var BACK_ZONES = [5, 6, 1];
+
+  /* Νόμος του γηπέδου σε μία πρόταση: ο κεντρικός έχει δικαίωμα στο
+     πίσω ΜΟΝΟ στη ζώνη 1 και ΜΟΝΟ όσο σερβίρουμε εμείς. Ο λιμπέρω
+     ποτέ μπροστά. Κάτι άλλο είναι παραβίαση.
+
+     Το server είναι κρίσιμο: μόλις πάρουν τον πόντο οι αντίπαλοι,
+     ο κεντρικός που είχε σερβίρει βγαίνει από το γήπεδο και στη
+     θέση του μπαίνει ο λιμπέρω. */
+  function enforceLiberoRule(order, server) {
+    if (server !== 'them') server = 'us';
     var o = Object.assign({}, order);
-    var mbs = [], lz = 0;
-    for (var z = 1; z <= 6; z++) {
-      if (isMBSlot(o[z])) mbs.push(z);
-      else if (isLSlot(o[z])) lz = z;
-    }
-    var server = serverZone();
 
-    /* (α) Κεντρικός στις ζώνες 5 ή 6 — δεν μπορεί, εκεί δεν σερβίρει.
-           Τον καλύπτει ο λιμπέρω. Στη ζώνη 1 ο κεντρικός είναι μέσα:
-           σερβίρει ο ίδιος. */
-    for (var i = 0; i < mbs.length; i++) {
-      var mbz = mbs[i];
-      if (mbz === server || !isBackCourt(mbz)) continue;
-      if (lz && isBackCourt(lz)) continue;   /* ήδη καλυπται */
-      if (!lz) { o[mbz] = 'L'; lz = mbz; }
-    }
+    var at = function (z) { return o[z]; };
+    var put = function (z, s) { o[z] = s; };
 
-    /* (β) Λιμπέρω μπροστά: μπαίνει ο ΔΕΥΤΕΡΟΣ κεντρικός στη θέση του
-           και ο λιμπέρω βγαίνει από το γήπεδο. Ο κεντρικός που
-           πήγε πίσω μένει εκεί — σερβίρει. */
-    if (lz && !isBackCourt(lz)) {
-      var backMb = mbs.filter(function (z) { return isBackCourt(z); })[0];
-      if (backMb != null) {
-        o[lz] = (o[backMb] === 'MB1') ? 'MB2' : 'MB1';
+    function findL() {
+      var i;
+      for (i = 0; i < BACK_ZONES.length; i++) if (isLSlot(o[BACK_ZONES[i]])) return BACK_ZONES[i];
+      for (i = 0; i < FRONT_ZONES.length; i++) if (isLSlot(o[FRONT_ZONES[i]])) return FRONT_ZONES[i];
+      return 0;
+    }
+    function findBackMB() {
+      for (var i = 0; i < BACK_ZONES.length; i++) {
+        if (isMBSlot(o[BACK_ZONES[i]])) return BACK_ZONES[i];
       }
+      return 0;
+    }
+
+    /* Μέχρι 4 βήματα — κάθε βήμα διορθώνει ΜΙΑ παραβίαση. */
+    for (var pass = 0; pass < 4; pass++) {
+      var lz = findL();
+      var mbz = findBackMB();
+      var changed = false;
+
+      /* (α) Λιμπέρω μπροστά. Ο MB που είναι πίσω μένει εκεί (εκείνος
+             σερβίρει)· τη θέση του λιμπέρω την παίρνει ο δεύτερος
+             κεντρικός. Αν δεν υπάρχει MB πίσω, ο λιμπέρω βγαίνει. */
+      if (lz && BACK_ZONES.indexOf(lz) === -1) {
+        put(lz, mbz ? (at(mbz) === 'MB1' ? 'MB2' : 'MB1') : null);
+        changed = true;
+        continue;
+      }
+
+      /* (β) Κεντρικός στο πίσω χωρίς δικαίωμα. */
+      if (mbz && !(server === 'us' && mbz === serverZone())) {
+        if (lz && BACK_ZONES.indexOf(lz) !== -1) {
+          /* Ο λιμπέρω καλύπτει ήδη άλλη πίσω θέση, δεν μπορεί να πάρει
+             κι αυτή. Ο MB μπαίνει μπροστά και κάποιος μπροστά πάει
+             στη θέση του — αλλιώς μένουν τέσσερις μπροστά. */
+          var swap = 0, anyFront = 0;
+          for (var i = 0; i < FRONT_ZONES.length; i++) {
+            var fz = FRONT_ZONES[i];
+            if (isMBSlot(at(fz)) || isLSlot(at(fz)) || !at(fz)) continue;
+            if (!anyFront) anyFront = fz;
+            if (at(fz) !== 'S') { swap = fz; break; }   /* μη σπάσουμε τον παίκτη σερβίς */
+          }
+          if (!swap) swap = anyFront;
+          if (swap) { put(swap, at(mbz)); put(mbz, at(swap)); }
+          else put(mbz, 'L');
+        } else {
+          put(mbz, 'L');          /* ο λιμπέρω παίρνει τη θέση του MB */
+        }
+        changed = true;
+      }
+
+      if (!changed) break;
     }
     return o;
   }
 
-  function rotateOrder(order, times) {
+  function rotateOrder(order, times, server) {
     var cur = Object.assign({}, order);
     var t = ((times % 6) + 6) % 6;
     for (var i = 0; i < t; i++) {
       var next = {};
       for (var z = 1; z <= 6; z++) next[z] = cur[z === 6 ? 1 : z + 1];
       /* ο κανόνας του λιμπέρω εφαρμόζεται σε ΚΑΘΕ βήμα */
-      cur = enforceLiberoRule(next);
+      cur = enforceLiberoRule(next, server);
     }
     return cur;
   }
 
   /* Σειρά περιστροφής ώστε ο παίκτης σερβίς να βρίσκεται στη ζώνη n.
      Στη βάση ο S είναι ήδη στη ζώνη 1, άρα χρειάζεται μόνο
-     περιστροφή (1-n) βημάτων — μία περιστροφή τον πάει 1→6. */
+     περιστροφή (1-n) βημάτων — μία περιστροφή τον πάει 1→6.
+     Ξεκινάμε πάντα σερβίροντας εμείς. */
   function orderForSetterZone(n) {
     n = Math.max(1, Math.min(6, Number(n) || 1));
-    return rotateOrder(BASE_ORDER, ((1 - n) % 6 + 6) % 6);
+    return rotateOrder(BASE_ORDER, ((1 - n) % 6 + 6) % 6, 'us');
   }
 
   function zoneOfSlot(order, slot) {
@@ -215,13 +257,15 @@
   /* Παραβιάσεις του γηπέδου. Ο MB στο πίσω δεν είναι από μόνος του
    * παραβίαση (σερβίρει άνωστα)· γίνεται όταν ταυτόχρονα υπάρχει
    * και λιμπέρω στο γήπεδο, οπότε το φτιάχνουμε. */
-  function validateOrder(order) {
+  function validateOrder(order, server) {
+    if (server !== 'them') server = 'us';
     var bad = [];
     var srv = serverZone();
     var lOn = 0;
     for (var z = 1; z <= 6; z++) {
-      /* ο MB επιτρέπεται μόνο μπροστά ή στη ζώνη 1 να σερβίρει */
-      if (isMBSlot(order[z]) && isBackCourt(z) && z !== srv) {
+      /* ο MB επιτρέπεται μπροστά, ή στη ζώνη 1 να σερβίρει ο ίδιος */
+      if (isMBSlot(order[z]) && isBackCourt(z) &&
+          !(z === srv && server === 'us')) {
         bad.push('MB στη ζώνη ' + z + ' (μπορεί μόνο στη ' + srv + ' να σερβίρει)');
       }
       if (isLSlot(order[z])) {

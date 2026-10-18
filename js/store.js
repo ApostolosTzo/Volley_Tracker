@@ -374,7 +374,7 @@
       /* αυτο-επιδιόρθωση: αρχαίες σειρές μπορεί να έχουν MB πίσω
          ή λιμπέρω μπροστά (πριν τον κανόνα). Η αλλαγή είναι
          μη-αναστρεπτέλλουσα, γι' αυτό το κάνουμε εδώ. */
-      var fixed = V.CONFIG.enforceLiberoRule(g.order);
+      var fixed = V.CONFIG.enforceLiberoRule(g.order, g.server);
       if (JSON.stringify(fixed) !== JSON.stringify(g.order)) {
         g.order = fixed;
         m.updatedAt = nowISO();
@@ -390,8 +390,9 @@
         for (var z = 1; z <= 6; z++) ord[z] = patch.order[z] || g.order[z] || V.CONFIG.BASE_ORDER[z];
         g.order = ord;
       }
-      /* ο MB δεν πάει ποτέ πίσω, ο λιμπέρω ποτέ μπροστά */
-      g.order = V.CONFIG.enforceLiberoRule(g.order);
+      /* ο MB δεν πάει ποτέ πίσω (εκτός ζώνης 1 να σερβίρει),
+         ο λιμπέρω ποτέ μπροστά */
+      g.order = V.CONFIG.enforceLiberoRule(g.order, g.server);
       m.game[set] = g;
       touch(m); emit();
       return g;
@@ -412,7 +413,7 @@
       if (delta > 0 && side !== g.server) {
         if (side === 'us') {
           /* κέρδισα το σερβίς → περιστροφή */
-          g.order = V.CONFIG.rotateOrder(g.order, 1);
+          g.order = V.CONFIG.rotateOrder(g.order, 1, side);
           g.rotations = (g.rotations || 0) + 1;
           rotated = true;
         }
@@ -486,7 +487,7 @@
       if (isMB) lu.activeMB = next; else lu.activeL = next;
       for (z = 1; z <= 6; z++) if (test(g.order[z])) g.order[z] = next;
 
-      g.order = V.CONFIG.enforceLiberoRule(g.order);
+      g.order = V.CONFIG.enforceLiberoRule(g.order, g.server);
       touch(m); emit();
       return { slot: next, name: Store.playerName(m, lu[next]), onCourt: true };
     },
