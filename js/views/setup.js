@@ -15,25 +15,25 @@
     var matches = V.Store.matches();
 
     wrap.appendChild(el('header', { class: 'home__hero' }, [
-      el('div', { class: 'logo' }, [el('span', { class: 'logo__ball', text: '\uD83C\uDFD0' })]),
-      el('h1', { class: 'home__title', text: 'Volley Tracker' }),
-      el('p', { class: 'home__sub', text: 'Στατιστικά αγώνα: χτυπήματα, υποδοχές, πάσες, σερβίς' })
+      el('div', { class: 'brand-mark' }, [el('span', { text: 'V' })]),
+      el('p', { class: 'eyebrow', text: 'VOLLEY COMMAND' }),
+      el('h1', { text: 'Στήσε τον αγώνα.' }),
+      el('p', {
+        class: 'home__sub',
+        text: 'Γρήγορη καταγραφή, καθαρή εικόνα και στατιστικά που ακολουθούν τον ρυθμό του παιχνιδιού.'
+      })
     ]));
 
-    wrap.appendChild(el('button', {
-      class: 'btn btn--primary btn--xl',
-      onclick: function () { newMatchDialog(); }
-    }, [el('span', { text: '＋' }), el('span', { text: 'Νέος αγώνας' })]));
-
-    /* εισαγωγή/εξαγωγή γρήγορα από την αρχική */
-    wrap.appendChild(el('div', { class: 'home__tools' }, [
-      el('button', { class: 'btn btn--ghost btn--sm', text: '\u2193 Εισαγωγή αγώνα', onclick: function () { ctx.importFile(); } }),
-      el('button', { class: 'btn btn--ghost btn--sm', text: '\u2191 Εξαγωγή όλων', onclick: function () { ctx.exportAll(); } })
+    wrap.appendChild(el('div', { class: 'home__top' }, [
+      el('h2', { text: matches.length ? 'ΑΓΩΝΕΣ (' + matches.length + ')' : 'ΚΑΝΕΝΑΣ ΑΓΩΝΑΣ ΑΚΟΜΑ' }),
+      el('div', { class: 'home-actions' }, [
+        el('button', { class: 'btn btn--ghost btn--sm', text: '↓ Εισαγωγή αγώνα', onclick: function () { ctx.importDialog(); } }),
+        el('button', { class: 'btn btn--ghost btn--sm', text: '↑ Εξαγωγή όλων', onclick: function () { ctx.exportAll(); } }),
+        el('button', { class: 'btn btn--primary btn--sm', text: '＋ Νέος αγώνας', onclick: function () { newMatchDialog(); } })
+      ])
     ]));
 
-    wrap.appendChild(el('h2', { class: 'home__h2', text: matches.length ? 'Αγώνες (' + matches.length + ')' : 'Κανένας αγώνας ακόμα' }));
-
-    var list = el('div', { class: 'matchlist' });
+    var list = el('div', { class: 'match-list' });
     if (!matches.length) {
       list.appendChild(el('p', { class: 'empty', text: 'Δημιούργησε τον πρώτο σου αγώνα για να ξεκινήσεις.' }));
     }
@@ -41,33 +41,26 @@
       var sets = V.Stats.bySet(m);
       var setsUs = sets.filter(function (s) { return s.us > s.them; }).length;
       var setsThem = sets.filter(function (s) { return s.them > s.us; }).length;
-      list.appendChild(el('div', { class: 'matchcard' }, [
-        el('button', {
-          class: 'matchcard__main',
-          onclick: function () { ctx.openMatch(m.id); }
-        }, [
-          el('div', { class: 'matchcard__teams' }, [
-            el('span', { class: 'matchcard__us', text: m.meta.teamUs || 'Εμείς' }),
-            el('span', { class: 'matchcard__score', text: sets.length ? setsUs + '–' + setsThem : '—' }),
-            el('span', { class: 'matchcard__them', text: m.meta.teamThem || 'Αντίπαλοι' })
-          ]),
-          el('div', { class: 'matchcard__meta', text: [
-            V.ui.fmtDate(m.meta.date),
-            m.meta.day ? '· ' + m.meta.day : '',
-            m.meta.competition ? '· ' + m.meta.competition : '',
-            '· ' + m.events.length + ' καταχωρήσεις'
-          ].filter(Boolean).join(' ') })
+      list.appendChild(el('div', { class: 'match-row' }, [
+        el('button', { class: 'match-row__main', onclick: function () { ctx.openMatch(m.id); } }, [
+          el('span', { class: 'match-row__teams', text: (m.meta.teamUs || 'Εμείς') + '  ·  ' + (m.meta.teamThem || 'Αντίπαλοι') }),
+          el('span', {
+            class: 'match-row__meta',
+            text: [
+              V.ui.fmtDate(m.meta.date),
+              m.meta.day,
+              m.meta.competition,
+              m.events.length + ' καταχωρήσεις'
+            ].filter(Boolean).join(' · ')
+          })
         ]),
+        el('span', { class: 'match-row__score', text: sets.length ? setsUs + '–' + setsThem : '—' }),
         el('button', {
-          class: 'icon-btn',
-          title: 'Εξαγωγή',
-          text: '\u2193',
+          class: 'icon-btn', title: 'Εξαγωγή .json', text: '↓',
           onclick: function () { ctx.exportMatch(m.id); }
         }),
         el('button', {
-          class: 'icon-btn icon-btn--danger',
-          title: 'Διαγραφή',
-          text: '\uD83D\uDDD1',
+          class: 'icon-btn icon-btn--danger', title: 'Διαγραφή', text: '✕',
           onclick: function () {
             V.ui.confirm('Διαγραφή αγώνα', 'Διαγραφή οριστικά τον αγώνα «' +
               (m.meta.teamUs || 'Εμείς') + ' vs ' + (m.meta.teamThem || 'Αντίπαλοι') + '»;', 'Διαγραφή')
@@ -91,6 +84,97 @@
       ]));
     }
     return wrap;
+  }
+
+  /* =========================================================
+   * Σελίδα Ρόστερ (η τρίτη προβολή μέσα στον αγώνα)
+   * ========================================================= */
+  function renderRosterPage(ctx) {
+    var m = ctx.match;
+    var onCourt = {};
+    V.Store.courtPlayers(m, ctx.set).forEach(function (p) {
+      if (p.playerId) onCourt[p.playerId] = p;
+    });
+
+    var list = el('div', { class: 'roster-list' });
+    if (!m.roster.length) {
+      list.appendChild(el('p', { class: 'empty', text: 'Κανένας παίκτης. Πρόσθεσε παίκτες στα δεξιά.' }));
+    }
+    m.roster.forEach(function (p) {
+      var on = !!onCourt[p.id];
+      list.appendChild(el('article', { class: 'roster-row' + (on ? ' is-on-court' : '') }, [
+        el('span', { class: 'avatar', text: p.name.charAt(0) }),
+        el('div', {}, [
+          el('strong', { text: (p.number != null && p.number !== '' ? '#' + p.number + ' ' : '') + p.name }),
+          el('small', {
+            text: p.position +
+              (p.also && p.also.length ? ' (' + p.also.join('/') + ')' : '') +
+              ' · ' + (on ? 'Ζώνη ' + onCourt[p.id].zone : 'Πάγκος')
+          })
+        ]),
+        el('button', {
+          class: 'icon-btn icon-btn--danger',
+          title: 'Διαγραφή ' + p.name,
+          disabled: on,
+          onclick: function () {
+            V.ui.confirm('Διαγραφή παίκτη', 'Διαγραφή τον παίκτη «' + p.name + '»;', 'Διαγραφή')
+              .then(function (ok) {
+                if (!ok) return;
+                V.Store.removePlayer(m.id, p.id);
+                V.ui.toast('Ο παίκτης διαγράφηκε', { tone: 'info' });
+              });
+          }
+        }, [V.icon('m6 6 12 12M18 6 6 18', 16)])
+      ]));
+    });
+
+    /* προσθήκη παίκτη */
+    var nName = V.ui.input({ placeholder: 'Όνομα παίκτη' });
+    var nNum = V.ui.input({ placeholder: 'Νο.', inputmode: 'numeric' });
+    var nPos = V.ui.select(C.POSITIONS.map(function (p) { return { id: p.id, label: p.label }; }), 'OH');
+    nName.addEventListener('input', function () {
+      var s = C.suggestPosition(nName.value);
+      if (s) nPos.value = s;
+    });
+    function addPlayer() {
+      var name = nName.value.trim();
+      if (!name) { V.ui.toast('Γράψε όνομα', { tone: 'warn' }); return; }
+      V.Store.addPlayer(m.id, {
+        name: name,
+        number: nNum.value,
+        position: nPos.value
+      });
+      nName.value = ''; nNum.value = '';
+      V.ui.toast('Ο ' + name + ' προστέθηκε', { tone: 'good' });
+    }
+    nName.addEventListener('keydown', function (e) { if (e.key === 'Enter') addPlayer(); });
+
+    var add = el('aside', { class: 'add-player' }, [
+      el('p', { class: 'eyebrow', text: 'ΝΕΟΣ ΠΑΙΚΤΗΣ' }),
+      el('h2', { text: 'Προσθήκη στο ρόστερ' }),
+      el('label', {}, [el('span', { text: 'ΟΝΟΜΑ' }), nName]),
+      el('label', {}, [el('span', { text: 'ΑΡΙΘΜΟΣ' }), nNum]),
+      el('label', {}, [el('span', { text: 'ΘΕΣΗ' }), nPos]),
+      el('button', {
+        class: 'btn btn--primary', onclick: addPlayer
+      }, [V.icon('M12 5v14M5 12h14', 14), el('span', { text: 'Προσθήκη παίκτη' })])
+    ]);
+
+    return el('div', { class: 'content' }, [
+      el('div', { class: 'page-title' }, [
+        el('div', {}, [
+          el('p', { class: 'eyebrow', text: 'TEAM MANAGEMENT' }),
+          el('h1', { text: 'Ρόστερ ομάδας' }),
+          el('p', { class: 'hint', text: 'Οι παίκτες με πράσινο είναι στο γήπεδο στο τρέχον σετ.' })
+        ]),
+        el('button', {
+          class: 'btn btn--ghost btn--sm',
+          text: '☰ Ενδέκη & αλλαγές',
+          onclick: function () { V.views.tools.menuDialog(ctx); }
+        })
+      ]),
+      el('div', { class: 'roster-layout' }, [list, add])
+    ]);
   }
 
   /* =========================================================
@@ -633,6 +717,7 @@
   V.views = V.views || {};
   V.views.setup = {
     renderHome: renderHome,
+    renderRosterPage: renderRosterPage,
     newMatchDialog: newMatchDialog,
     lineupDialog: lineupDialog,
     rosterDialog: rosterDialog,

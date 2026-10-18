@@ -1,7 +1,7 @@
 /* =============================================================
  * views/court.js — το γήπεδο: η οθόνη που ακολουθεί τη ροή του παιχνιδιού
  *
- *   πάνω    : η αντίπαλη ομάδα (6 απλά σημεία, δεν πατιούνται)
+ *   πάνω    : η αντίπαλη ομάδα (6 απλοί κύκλοι, δεν πατιούνται)
  *   φιλέ    : στη μέση
  *   κάτω    : η δική μας ομάδα (6 παίκτες που πατιούνται)
  *
@@ -16,18 +16,17 @@
   var C = V.CONFIG;
 
   /* =========================================================
-   * Αρχική ρύθμιση σετ: πού είναι ο παίκτης σερβίς
+   * Αρχική ρύθμιση σετ: πού είναι ο παίκτης σερβίς.
    * Ποιος σερβίρει πρώτος δεν ρωτάμε — θεωρούμε ότι σερβίρει η
-   * δική μας ομάδα, γι' αυτό και η παρακάτω διάταξη έχει τον S
-   * στη ζώνη 1.
+   * δική μας ομάδα.
    * ========================================================= */
   function startSetDialog(ctx, opts) {
     opts = opts || {};
     var m = ctx.match;
     var set = ctx.set;
     var zone = 1;
+    var dlg = null;
 
-    /* ζώνες σε σχήμα γηπέδου (μπροστά πάνω, πίσω κάτω) */
     var zoneBox = el('div', { class: 'startset__zones' });
     var zoneBtns = {};
     [4, 3, 2, 5, 6, 1].forEach(function (z) {
@@ -59,7 +58,7 @@
       ])
     ]);
 
-    V.ui.modal({
+    dlg = V.ui.modal({
       title: 'Έναρξη Σετ ' + set,
       body: body,
       dismissible: false,
@@ -103,115 +102,52 @@
   }
 
   /* =========================================================
-   * Ταμπλό σκορο του γηπέδου (T1 = εμείς, T2 = αντίπαλοι)
-   * Τα +/− περνούν από το awardPoint, άρα χειροκίνητη διόρθωση
-   * σκορο κάνει σωστή περιστροφή όταν γίνεται side-out.
-   * ========================================================= */
-  function scoreboard(ctx) {
-    var m = ctx.match;
-    var sc = V.Store.score(m, ctx.set);
-    var us = m.meta.teamUs || 'Εμείς';
-    var them = m.meta.teamThem || 'Αντίπαλοι';
-
-    function box(key, name, score) {
-      return el('div', { class: 'cscore__side cscore__side--' + key }, [
-        el('button', {
-          class: 'cscore__btn', text: '−', 'aria-label': 'Αφαίρεση',
-          onclick: function () {
-            if ((sc[key] || 0) <= 0) { V.ui.toast('Το σκορ δεν πάει κάτω', { tone: 'warn', duration: 1200 }); return; }
-            V.ui.buzz(6);
-            V.Store.awardPoint(m.id, ctx.set, key, -1);
-          }
-        }),
-        el('div', { class: 'cscore__mid' }, [
-          el('span', { class: 'cscore__n', text: name }),
-          el('span', { class: 'cscore__v', text: String(score || 0) })
-        ]),
-        el('button', {
-          class: 'cscore__btn cscore__btn--plus', text: '+', 'aria-label': 'Πόντος',
-          onclick: function () { V.ui.buzz(14); V.Store.awardPoint(m.id, ctx.set, key, 1); }
-        })
-      ]);
-    }
-
-    var sets = V.Stats.bySet(m).map(function (r) {
-      return el('span', {
-        class: 'setsq' + (r.us > r.them ? ' setsq--us' : (r.them > r.us ? ' setsq--them' : '')),
-        text: String(r.set)
-      });
-    });
-
-    return el('div', { class: 'cscore' }, [
-      box('us', us, sc.us),
-      el('div', { class: 'cscore__mid2' }, [
-        el('span', { class: 'cscore__dash', text: '–' }),
-        sets.length ? el('div', { class: 'cscore__sets' }, sets) : null
-      ]),
-      box('them', them, sc.them)
-    ]);
-  }
-
-  /* =========================================================
    * Γήπεδο
    * ========================================================= */
-  function court(ctx) {
+  function courtBoard(ctx) {
     var m = ctx.match;
     var set = ctx.set;
     var g = V.Store.game(m, set);
     var ours = V.Store.courtPlayers(m, set);
-    var f = flowState(ctx);
 
-    var wrap = el('div', { class: 'court' });
-
-    /* --- αντίπαλη πλευρά: απλά σημεία --- */
-    var opp = el('div', { class: 'court__half court__half--them' }, [4, 3, 2, 5, 6, 1].map(function (z) {
-      return el('div', { class: 'bubble bubble--opp', title: 'Αντίπαλος ζώνη ' + z });
+    /* --- αντίπαλη πλευρά: απλοί κύκλοι με τη ζώνη --- */
+    var opp = el('div', { class: 'court-half court-half--them' }, [4, 3, 2, 5, 6, 1].map(function (z) {
+      return el('div', { class: 'opp-slot', title: 'Αντίπαλος ζώνη ' + z }, [
+        el('span', { text: String(z) })
+      ]);
     }));
 
-    /* --- φιλέ --- */
-    var net = el('div', { class: 'court__net' }, [el('span', { class: 'court__netlbl', text: 'φιλέ' })]);
-
     /* --- δική μας πλευρά --- */
-    var mine = el('div', { class: 'court__half court__half--us' });
     var byZone = {};
     ours.forEach(function (p) { byZone[p.zone] = p; });
-    [4, 3, 2, 5, 6, 1].forEach(function (z) {
+    var mine = el('div', { class: 'court-half court-half--us' }, [4, 3, 2, 5, 6, 1].map(function (z) {
       var p = byZone[z] || { zone: z, name: '—', label: '', playerId: null };
-      var isServer = (g.server === 'us' && z === 1);
+      var isServer = (g.server === 'us' && z === C.serverZone());
       var pl = p.playerId ? V.Store.player(m, p.playerId) : null;
       var num = pl && pl.number != null && pl.number !== '' ? String(pl.number) : '';
-      var b = el('button', {
-        class: 'bubble bubble--us' + (p.playerId ? '' : ' bubble--empty') + (isServer ? ' bubble--server' : ''),
-        title: p.playerId ? 'Ζώνη ' + z + ' — ' + (num ? '#' + num + ' ' : '') + p.name : 'Ζώνη ' + z + ' — κενό',
+
+      return el('button', {
+        class: 'court-player' + (isServer ? ' court-player--serving' : '') +
+          (p.playerId ? '' : ' court-player--empty'),
+        title: p.playerId
+          ? 'Ζώνη ' + z + ' — ' + (num ? '#' + num + ' ' : '') + p.name
+          : 'Ζώνη ' + z + ' — κενό (πάτα για ενδέκη)',
         onclick: function () { onCourtTap(ctx, p); }
       }, [
-        el('span', { class: 'bubble__pos', text: p.label || '—' }),
-        el('span', { class: 'bubble__name' }, [
-          num ? el('span', { class: 'bubble__num', text: '#' + num }) : null,
-          el('span', { text: shortName(p.name) })
-        ]),
-        isServer ? el('span', { class: 'bubble__ball', text: '\u25CF' }) : null
+        el('span', { class: 'position-badge', text: p.label || '—' }),
+        el('strong', { text: shortName(p.name) }),
+        el('small', { text: (num ? '#' + num + ' ' : '') + 'ΘΕΣΗ ' + z })
       ]);
-      mine.appendChild(b);
-    });
+    }));
 
-    wrap.appendChild(opp);
-    wrap.appendChild(net);
-    wrap.appendChild(mine);
-
-    /* --- λωρίδα οδηγιών --- */
-    wrap.appendChild(el('div', { class: 'court__hint' }, [
-      el('span', { class: 'court__hinttxt', text: hintFor(ctx) }),
-      ctx.flow ? el('button', {
-        class: 'btn btn--ghost btn--sm', text: '✕ Ακύρωση',
-        onclick: function () { ctx.flow = null; V.app.render(); }
-      }) : null
-    ]));
-
-    return wrap;
+    return el('div', { class: 'volley-court' }, [
+      opp,
+      el('div', { class: 'net' }, [el('span', { text: 'ΦΙΛΕ' })]),
+      mine
+    ]);
   }
 
-  /* κρίνεις όνομα ώστε να χωράει στη φούσκα */
+  /* κοντεύεις όνομα ώστε να χωράει στον κύκλο */
   function shortName(n) {
     var s = String(n || '—');
     if (s.length <= 11) return s;
@@ -238,14 +174,13 @@
       return;
     }
     if (f.stage === 'serve') {
-      /* Σερβίρει ΠΑΝΤΑ ο παίκτης της ζώνης 1 — ο κανόνας του βόλι.
-         Κάποιος άλλος δεν μπορεί να καταχωρήσει σερβίς. */
+      /* Σερβίρει ΠΑΝΤΑ ο παίκτης της ζώνης 1 — ο κανόνας του βόλι */
       if (p.zone !== C.serverZone()) {
         var srv = V.Store.courtPlayers(ctx.match, ctx.set).filter(function (x) {
           return x.zone === C.serverZone();
         })[0];
-        V.ui.toast('Σερβίρει μόνο ο ' + (srv && srv.playerId ? srv.name : 'παίκτηςς στη ζώνη 1') +
-          ' — ζώνη 1', { tone: 'warn', duration: 2400 });
+        V.ui.toast('Σερβίρει μόνο ο ' + (srv && srv.playerId ? srv.name : 'παίκτης της ζώνης 1'),
+          { tone: 'warn', duration: 2400 });
         return;
       }
       serveModal(ctx, p.playerId);
@@ -257,15 +192,19 @@
   /* =========================================================
    * ΥΠΟΔΟΧΗ 0/1/2/3
    * ========================================================= */
+  var REC_HINT = {
+    '0': 'Χωρίς μπλόκ', '1': 'Μόνο OH',
+    '2': 'OH ή OPP', '3': 'Όλες οι επιλογές'
+  };
+
   function receptionRating(ctx, playerId) {
     var m = ctx.match;
     var name = V.Store.playerName(m, playerId);
     var dlg = null;
 
-    var grid = el('div', { class: 'rategrid' }, C.RECEPTION_TARGETS.map(function (t) {
+    var grid = el('div', { class: 'rating-grid' }, C.RECEPTION_TARGETS.map(function (t) {
       return el('button', {
-        class: 'rate rate--rec',
-        title: t.hint || '',
+        class: t.id === '3' ? 'good' : (t.id === '0' ? 'bad' : ''),
         onclick: function () {
           /* Ο τύπος 0 δίνει πόντο στους (όταν το αυτόματο σκορ είναι
              ενεργό) — άρα το rally τελείωσε, δεν ζητάμε επιθέτη.
@@ -282,30 +221,42 @@
 
           if (dlg) dlg.close();
           V.ui.buzz(side ? 18 : 10);
-          V.ui.toast(
-            name + ' · υποδοχή ' + t.label + (endsRally ? '  ·  +1 αντίπαλοι' : ''),
-            { tone: endsRally ? 'bad' : 'neutral', actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); } }
-          );
-          if (!endsRally) {
-            setTimeout(function () {
-              V.ui.toast('Τώρα πάτα ποιος χτύπησε', { tone: 'info', duration: 2000 });
-            }, 420);
-          }
+          V.ui.toast(name + ' · υποδοχή ' + t.label + (endsRally ? '  ·  +1 αντίπαλοι' : ''), {
+            tone: endsRally ? 'bad' : 'neutral',
+            actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); }
+          });
         }
       }, [
-        el('span', { class: 'rate__n', text: t.label }),
-        t.sub ? el('span', { class: 'rate__sub', text: t.sub }) : null
+        el('span', { text: t.label }),
+        el('small', { text: REC_HINT[t.id] || (t.sub || '') })
       ]);
     }));
 
     dlg = V.ui.modal({
-      title: 'Υποδοχή — ' + name,
-      body: el('div', {}, [
-        el('p', { class: 'modal__text', text: 'Τύπος υποδοχής: πόσοι μπλόκερ έχουν ανέβει ψηλά.' }),
-        grid
-      ]),
+      title: 'Υποδοχή',
+      body: playerHead(name, 'reception', positionOf(m, playerId)),
       actions: [{ label: 'Άκυρο', variant: 'ghost' }]
     });
+    dlg.body.appendChild(el('p', { class: 'modal-label', text: 'ΤΥΠΟΣ ΥΠΟΔΟΧΗΣ' }));
+    dlg.body.appendChild(el('p', { class: 'modal-text', text: 'Πόσοι μπλόκερ έχουν ανέβει ψηλά.' }));
+    dlg.body.appendChild(grid);
+  }
+
+  /* κεφαλίδα παίκτη μέσα στο modal */
+  function playerHead(name, kind, position) {
+    return el('div', { class: 'modal-player' }, [
+      el('span', { text: (name || '?').charAt(0) }),
+      el('div', {}, [
+        el('p', { text: kind }),
+        el('h2', { text: name }),
+        el('small', { text: position || '' })
+      ])
+    ]);
+  }
+
+  function positionOf(m, pid) {
+    var p = V.Store.player(m, pid);
+    return p ? p.position : '';
   }
 
   /* =========================================================
@@ -320,14 +271,14 @@
 
     var draft = { target: guessTarget(ctx, attackerId), issues: [] };
 
-    var targetSeg = el('div', { class: 'seg seg--fill' }, C.PASS_TARGETS.map(function (t) {
+    var targetTabs = el('div', { class: 'type-tabs' }, C.PASS_TARGETS.map(function (t) {
       return el('button', {
-        class: 'seg__btn' + (t.id === draft.target ? ' is-active' : ''),
+        class: t.id === draft.target ? 'active' : '',
         text: t.label,
         onclick: function () {
           draft.target = t.id;
-          Array.prototype.forEach.call(this.parentNode.children, function (b) { b.classList.remove('is-active'); });
-          this.classList.add('is-active');
+          Array.prototype.forEach.call(this.parentNode.children, function (b) { b.classList.remove('active'); });
+          this.classList.add('active');
         }
       });
     }));
@@ -351,19 +302,9 @@
     }
     drawChips();
 
-    V.ui.modal({
-      title: 'Πάσα — ' + setter,
-      body: el('div', { class: 'form' }, [
-        el('p', { class: 'modal__text', text: attacker + ' χτυπάει. Ο ' + setter + ' βαθμολογεί την πάσα.' }),
-        el('div', { class: 'sticky' }, [
-          el('span', { class: 'sticky__label', text: 'Σε ποιον πήγε' }),
-          targetSeg
-        ]),
-        el('div', { class: 'issues' }, [
-          el('span', { class: 'sticky__label', text: 'Πρόβλημα (κανένα = καθαρή)' }),
-          chips
-        ])
-      ]),
+    var dlg = V.ui.modal({
+      title: 'Πάσα',
+      body: playerHead(setter, 'pass', positionOf(m, setterId)),
       actions: [
         {
           label: 'Χωρίς χτύπημα', variant: 'ghost',
@@ -383,11 +324,15 @@
               issues: draft.issues.slice()
             });
             /* κλείνει και ανοίγει αμέσως το παράθυρο του χτυπήματος */
-            setTimeout(function () { attackChoice(ctx, attackerId); }, 160);
+            setTimeout(function () { attackChoice(ctx, attackerId); }, 170);
           }
         }
       ]
     });
+    dlg.body.appendChild(el('p', { class: 'modal-label', text: 'ΣΕ ΠΟΙΟΝ ΕΓΙΝΕ Η ΠΑΣΑ' }));
+    dlg.body.appendChild(targetTabs);
+    dlg.body.appendChild(el('p', { class: 'modal-label second', text: 'ΠΡΟΒΛΗΜΑ (ΚΑΝΕΝΑ = ΚΑΘΑΡΗ)' }));
+    dlg.body.appendChild(chips);
   }
 
   /* =========================================================
@@ -422,9 +367,8 @@
     var grid = el('div', {
       class: 'amat-grid',
       style: 'grid-template-columns:repeat(' + C.ATTACK_KINDS.length + ',1fr)'
-    });
-    C.ATTACK_KINDS.forEach(function (k) {
-      var col = el('div', { class: 'amat-col', style: '--accent-c:' + (k.accent || 'var(--accent)') }, [
+    }, C.ATTACK_KINDS.map(function (k) {
+      var col = el('div', { class: 'amat-col', style: '--accent-c:' + (k.accent || 'var(--acid)') }, [
         el('div', { class: 'amat-col__head', text: k.label })
       ]);
       C.ATTACK_RESULTS[k.id].forEach(function (r) {
@@ -437,14 +381,16 @@
           el('span', { class: 'amat-btn__label', text: r.label })
         ]));
       });
-      grid.appendChild(col);
-    });
+      return col;
+    }));
 
     dlg = V.ui.modal({
-      title: 'Χτύπημα — ' + attacker,
-      body: grid,
+      title: 'Χτύπημα',
+      body: playerHead(attacker, 'attack', positionOf(m, attackerId)),
       actions: [{ label: 'Άκυρο', variant: 'ghost' }]
     });
+    dlg.body.appendChild(el('p', { class: 'modal-label', text: 'ΑΠΟΤΕΛΕΣΜΑ' }));
+    dlg.body.appendChild(grid);
   }
 
   /* =========================================================
@@ -453,7 +399,7 @@
   function serveModal(ctx, playerId) {
     var m = ctx.match;
     var name = V.Store.playerName(m, playerId);
-    var draft = { stype: ctx.sticky.serveType || 'jump', zone: ctx.sticky.serveZone || null };
+    var draft = { zone: ctx.sticky.serveZone || null };
     var dlg = null;
 
     var zones = el('div', { class: 'chiprow' });
@@ -498,21 +444,24 @@
       V.ui.buzz(point ? 20 : 10);
       V.ui.toast(
         name + ' · ' + (stype === 'float' ? 'Float' : 'Άλμα') + ' · ' +
-        V.label.serveResult(result) + (point === 'us' ? '  ·  +1 εμείς' : (point === 'them' ? '  ·  +1 αντίπαλοι' : '')),
-        { tone: result === 'ace' || result === 'difficult' ? 'good' : (result === 'out' ? 'bad' : 'neutral'),
-          actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); } }
+        V.label.serveResult(result) +
+        (point === 'us' ? '  ·  +1 εμείς' : (point === 'them' ? '  ·  +1 αντίπαλοι' : '')),
+        {
+          tone: result === 'ace' || result === 'difficult' ? 'good' : (result === 'out' ? 'bad' : 'neutral'),
+          actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); }
+        }
       );
     }
 
-    /* μία στήλη ανά τύπο σερβίς, όπως στην καρτέλα «Σερβίς» */
+    /* μία στήλη ανά τύπο σερβίς */
     var grid = el('div', {
       class: 'amat-grid',
       style: 'grid-template-columns:repeat(' + C.SERVE_TYPES.length + ',1fr)'
-    });
-    C.SERVE_TYPES.forEach(function (t) {
-      var col = el('div', { class: 'amat-col', style: '--accent-c:' + (t.id === 'float' ? '#22d3ee' : 'var(--accent)') }, [
-        el('div', { class: 'amat-col__head', text: t.label })
-      ]);
+    }, C.SERVE_TYPES.map(function (t) {
+      var col = el('div', {
+        class: 'amat-col',
+        style: '--accent-c:' + (t.id === 'float' ? 'var(--blue)' : 'var(--acid)')
+      }, [el('div', { class: 'amat-col__head', text: t.label })]);
       C.SERVE_RESULTS.forEach(function (r) {
         col.appendChild(el('button', {
           class: 'amat-btn amat-btn--' + r.tone,
@@ -523,34 +472,33 @@
           el('span', { class: 'amat-btn__label', text: r.label })
         ]));
       });
-      grid.appendChild(col);
-    });
+      return col;
+    }));
 
     dlg = V.ui.modal({
-      title: 'Σερβίς — ' + name,
-      body: el('div', { class: 'form' }, [
-        grid,
-        el('div', { class: 'issues' }, [
-          el('span', { class: 'sticky__label', text: 'Ζώνη (προαιρετικό)' }),
-          zones
-        ])
-      ]),
+      title: 'Σερβίς',
+      body: playerHead(name, 'serve', positionOf(m, playerId)),
       actions: [{ label: 'Άκυρο', variant: 'ghost' }]
     });
+    dlg.body.appendChild(el('p', { class: 'modal-label', text: 'ΤΥΠΟΣ ΚΑΙ ΑΠΟΤΕΛΕΣΜΑ' }));
+    dlg.body.appendChild(grid);
+    dlg.body.appendChild(el('p', { class: 'modal-label second', text: 'ΖΩΝΗ (ΠΡΟΑΙΡΕΤΙΚΟ)' }));
+    dlg.body.appendChild(zones);
   }
 
   /* =========================================================
    * ΑΜΥΝΑ 0-3
    * ========================================================= */
+  var DEF_HINT = ['Χαμένη μπάλα', 'Δύσκολη', 'Ελεγχόμενη', 'Άριστη'];
+
   function defenseRating(ctx, playerId) {
     var m = ctx.match;
     var name = V.Store.playerName(m, playerId);
     var dlg = null;
 
-    var grid = el('div', { class: 'rategrid' }, C.DEFENSE_RESULTS.map(function (r) {
+    var grid = el('div', { class: 'rating-grid' }, C.DEFENSE_RESULTS.map(function (r) {
       return el('button', {
-        class: 'rate rate--' + r.tone,
-        title: r.hint || '',
+        class: r.id === '3' ? 'good' : (r.id === '0' ? 'bad' : ''),
         onclick: function () {
           V.Store.addEvent(m.id, { set: ctx.set, type: 'defense', playerId: playerId, target: r.id });
           if (dlg) dlg.close();
@@ -561,19 +509,18 @@
           });
         }
       }, [
-        el('span', { class: 'rate__n', text: r.label }),
-        el('span', { class: 'rate__sub', text: r.hint })
+        el('span', { text: r.label }),
+        el('small', { text: r.hint || DEF_HINT[r.id] })
       ]);
     }));
 
     dlg = V.ui.modal({
-      title: 'Άμυνα — ' + name,
-      body: el('div', {}, [
-        el('p', { class: 'modal__text', text: 'Πόσο καλά διάβασε τη μπάλα.' }),
-        grid
-      ]),
+      title: 'Άμυνα',
+      body: playerHead(name, 'defense', positionOf(m, playerId)),
       actions: [{ label: 'Άκυρο', variant: 'ghost' }]
     });
+    dlg.body.appendChild(el('p', { class: 'modal-label', text: 'ΒΑΘΜΟΣ ΑΜΥΝΑΣ' }));
+    dlg.body.appendChild(grid);
   }
 
   /* =========================================================
@@ -584,9 +531,9 @@
      εκεί είναι το σκορ, η κατάσταση και η επόμενη κίνηση. */
   function scrollToCourt() {
     try {
-      var screen = document.querySelector('.cscreen');
-      if (screen && screen.scrollIntoView) {
-        screen.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      var board = document.querySelector('.volley-court');
+      if (board && board.scrollIntoView) {
+        board.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
       window.scrollTo(0, 0);
@@ -600,8 +547,7 @@
 
   function findSetter(ctx) {
     var cp = V.Store.courtPlayers(ctx.match, ctx.set);
-    var s = cp.filter(function (p) { return p.slot === 'S'; })[0];
-    return (s && s.playerId) ? s : null;
+    return cp.filter(function (p) { return p.slot === 'S'; })[0] || null;
   }
 
   /* προτείνει σε ποιον πήγε η πάσα, βάσει του χτυπήματος */
@@ -619,157 +565,254 @@
    * ========================================================= */
   function controls(ctx) {
     var m = ctx.match;
-    var lu = V.Store.lineup(m, ctx.set);
     var players = V.Store.courtPlayers(m, ctx.set);
 
     /* ποιος παίζει ΑΥΤΗ τη στιγμή στη θέση MB / L */
     function onCourt(group) {
       var test = (group === 'MB') ? C.isMBSlot : C.isLSlot;
       var rows = players.filter(function (p) { return test(p.slot); });
-      if (!rows.length) return '—';
+      if (!rows.length) return 'εκτός';
       return rows.map(function (r) { return r.name; }).join(' + ');
     }
 
-    /* --- άμυνα --- */
-    var defBtn = el('button', {
-      class: 'btn btn--big btn--ghost cbtn cbtn--wide',
-      onclick: function () {
-        ctx.flow = ctx.flow && ctx.flow.stage === 'defense-pick' ? null : { stage: 'defense-pick' };
-        V.ui.buzz(10);
-        V.app.render();
-      }
-    }, [
-      el('span', { class: 'cbtn__ico', text: '\uD83D\uDDE1' }),
-      el('span', { class: 'cbtn__txt', text: 'Άμυνα' }),
-      el('span', { class: 'cbtn__sub', text: '0-3' })
-    ]);
+    var defOn = !!(ctx.flow && ctx.flow.stage === 'defense-pick');
 
-    /* --- swap λιμπέρω / MB (αλλάζει ΠΟΙΟΣ παίζει, όχι τη θέση) --- */
-    function swapBtn(group, title) {
-      return el('button', {
-        class: 'btn btn--ghost cbtn',
-        title: title,
+    var row = el('div', { class: 'quick-actions' }, [
+      el('button', {
+        class: 'qa-defense' + (defOn ? ' is-on' : ''),
+        title: 'Άμυνα — πάτα μετά τον παίκτη που αμύνθηκε',
         onclick: function () {
-          var r = V.Store.swapSlot(m.id, ctx.set, group);
-          V.ui.buzz(14);
-          if (!r || !r.onCourt) {
-            V.ui.toast(r && r.reason ? r.reason : 'Δεν υπάρχει τι να αλλαγή', { tone: 'warn', duration: 1800 });
-            return;
-          }
-          V.ui.toast('Μπαίνει ο ' + r.name, { tone: 'info', duration: 1500 });
+          ctx.flow = defOn ? null : { stage: 'defense-pick' };
+          V.ui.buzz(10);
+          V.app.render();
         }
       }, [
-        el('span', { class: 'cbtn__ico', text: '\u21C4' }),
-        el('span', { class: 'cbtn__txt', text: group === 'MB' ? 'MB' : 'L' }),
-        el('span', { class: 'cbtn__sub', text: onCourt(group) })
-      ]);
-    }
-
-    /* --- γρήγορη σημείωση --- */
-    var noteInput = el('input', {
-      class: 'input cnote__input',
-      type: 'text',
-      placeholder: 'Γρήγορη σημείωση… (π.χ. «κόλλησε ο Νικος στο δίχτυ»)',
-      value: ''
-    });
-    noteInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); saveNote(); }
-    });
-    function saveNote() {
-      var txt = noteInput.value.trim();
-      if (!txt) return;
-      V.Store.addEvent(m.id, { set: ctx.set, type: 'note', text: txt });
-      noteInput.value = '';
-      V.ui.buzz(10);
-      V.ui.toast('Σημείωση: ' + txt, { tone: 'info', duration: 2600 });
-      /* το input ζει μέσα σε αυτό το render — δεν χρειάζεται επανασχεδιασμός */
-      V.ui.$$('.cnote__input').forEach(function (i) { i.value = ''; });
-    }
-
-    /* --- σετ + ενδέκη --- */
-    var cur = V.Store.currentSet(m);
-    var nums = [];
-    for (var i = 1; i <= cur; i++) nums.push(i);
-
-    return el('div', { class: 'cfoot' }, [
-      el('div', { class: 'cfoot__row' }, [
-        defBtn,
-        swapBtn('L', 'Αλλαγή λιμπέρω'),
-        swapBtn('MB', 'Αλλαγή MB')
+        V.icon('M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM9 12l2 2 4-4', 14),
+        el('span', { text: 'Άμυνα' })
       ]),
-      el('div', { class: 'cnote' }, [
-        noteInput,
-        el('button', { class: 'btn btn--ghost btn--sm', text: '+ Σημείωση', onclick: saveNote })
+      el('button', {
+        title: 'Αλλαγή λιμπέρω',
+        onclick: function () {
+          var r = V.Store.swapSlot(m.id, ctx.set, 'L');
+          V.ui.buzz(14);
+          V.ui.toast(r && r.onCourt ? 'Μπαίνει ο ' + r.name : (r && r.reason ? r.reason : '—'),
+            { tone: r && r.onCourt ? 'info' : 'warn', duration: 1600 });
+        }
+      }, [
+        V.icon('m16 3 4 4-4 4M4 7h16M8 21l-4-4 4-4M20 17H4', 14),
+        el('span', { text: 'Libero' }),
+        el('span', { class: 'qa-sub', text: onCourt('L') })
       ]),
-      el('div', { class: 'cfoot__row cfoot__row--set' }, [
-        el('div', { class: 'seg seg--sm' }, nums.map(function (n) {
-          return el('button', {
-            class: 'seg__btn' + (ctx.set === n ? ' is-active' : ''),
-            text: 'Σετ ' + n,
-            onclick: function () { ctx.setSet(n); }
+      el('button', {
+        title: 'Αλλαγή κεντρικού',
+        onclick: function () {
+          var r = V.Store.swapSlot(m.id, ctx.set, 'MB');
+          V.ui.buzz(14);
+          V.ui.toast(r && r.onCourt ? 'Μπαίνει ο ' + r.name : (r && r.reason ? r.reason : '—'),
+            { tone: r && r.onCourt ? 'info' : 'warn', duration: 1600 });
+        }
+      }, [
+        V.icon('m16 3 4 4-4 4M4 7h16M8 21l-4-4 4-4M20 17H4', 14),
+        el('span', { text: 'MB' }),
+        el('span', { class: 'qa-sub', text: onCourt('MB') })
+      ]),
+      el('button', {
+        class: 'rotate-button', title: 'Περιστροφή χωρίς πόντο (διόρθωση)',
+        onclick: function () {
+          var set = V.Store.currentSet(m);
+          var g = V.Store.game(m, set);
+          V.Store.setGame(m.id, set, {
+            order: C.rotateOrder(g.order, 1),
+            rotations: (g.rotations || 0) + 1
           });
-        })),
-        el('button', {
-          class: 'btn btn--ghost btn--sm',
-          text: V.Store.hasLineup(m, ctx.set) ? 'Ενδέκη' : '＋ Ενδέκη',
-          onclick: function () { V.views.setup.lineupDialog(m, ctx.set); }
-        }),
-        el('button', {
-          class: 'btn btn--ghost btn--sm',
-          text: 'Ρύθμιση σετ',
-          onclick: function () { startSetDialog(ctx); }
-        })
+          V.ui.buzz(14);
+          V.ui.toast('Χειροκίνητη περιστροφή', { tone: 'info', duration: 1400 });
+        }
+      }, [
+        el('span', { text: 'Περιστροφή' }),
+        V.icon('m9 18 6-6-6-6', 14)
       ])
     ]);
+
+    return row;
   }
 
   /* =========================================================
-   * Κατάσταση παιχνιδιού (η λέξη κάτω από το σκορ)
+   * Γρήγορη σημείωση — κάτω από το MATCH LOG
    * ========================================================= */
-  function statusLine(ctx) {
+  function noteBox(ctx) {
     var m = ctx.match;
-    var g = V.Store.game(m, ctx.set);
-    var f = ctx.flow;
-    var us = m.meta.teamUs || 'Εμείς';
+    var input = el('input', {
+      class: 'input', type: 'text',
+      placeholder: 'Γρήγορη σημείωση…',
+      maxlength: '140'
+    });
 
-    var txt;
-    if (f && f.stage === 'pick-attacker') txt = us + ' · ετοιμάζει επίθεση';
-    else if (f && f.stage === 'defense-pick') txt = us + ' · επιλέξε άμυνα';
-    else if (g.server === 'us') {
-      /* ο σερβιέρ είναι ΠΑΝΤΑ όποιος βρίσκεται στη ζώνη 1 —
-         το servingPlayerId μένει παλιό μετά την περιστροφή */
-      var z1 = V.Store.courtPlayers(m, ctx.set).filter(function (p) { return p.zone === 1; })[0];
-      txt = us + ' έχει σέρβις' + (z1 && z1.playerId ? ' — ' + z1.name : '');
-    } else txt = us + ' έχει Υποδοχή';
+    function save() {
+      var txt = input.value.trim();
+      if (!txt) return;
+      V.Store.addEvent(m.id, { set: ctx.set, type: 'note', text: txt });
+      V.ui.buzz(10);
+      V.ui.toast('Σημείωση: ' + txt, { tone: 'info', duration: 2600 });
+    }
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); save(); }
+    });
 
-    var canStart = !m.game[ctx.set];
-    return el('div', { class: 'cstatus' }, [
-      el('span', { class: 'cstatus__txt', text: txt }),
-      canStart ? el('button', {
-        class: 'btn btn--primary btn--sm',
-        text: 'Ξεκίνα το σετ',
-        onclick: function () { startSetDialog(ctx); }
-      }) : null
+    var btn = el('button', { text: 'Προσθήκη σημείωσης', onclick: save });
+    function sync() { btn.disabled = !input.value.trim(); }
+    input.addEventListener('input', sync);
+    sync();
+
+    return el('div', { class: 'note-box' }, [
+      el('p', { class: 'note-title' }, [
+        V.icon('M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z', 14),
+        el('span', { text: 'ΣΗΜΕΙΩΣΗ' })
+      ]),
+      input,
+      btn
     ]);
   }
 
   /* =========================================================
-   * render
+   * MATCH LOG (δεξιά στήλη)
+   * ========================================================= */
+  var CAT_LABEL = {
+    reception: 'Υποδοχή', attack: 'Χτύπημα', pass: 'Πάσα',
+    serve: 'Σερβίς', defense: 'Άμυνα', note: 'Σημείωση'
+  };
+
+  function matchLog(ctx) {
+    var m = ctx.match;
+    var evs = m.events.filter(function (e) { return e.set === ctx.set; }).slice().reverse();
+    var shown = evs.slice(0, ctx.logAll ? evs.length : 40);
+
+    var feed = el('div', { class: 'event-feed' });
+
+    if (!shown.length) {
+      feed.appendChild(el('div', { class: 'empty-state' }, [
+        el('span', {}, [V.icon('M3 4h18v16H3zM3 12h18M12 4v16', 28)]),
+        el('strong', { text: 'Έτοιμοι για πρώτο σερβίς' }),
+        el('p', { text: 'Οι ενέργειες του αγώνα θα εμφανίζονται εδώ.' })
+      ]));
+    } else {
+      shown.forEach(function (e) {
+        var p = e.playerId ? V.Store.player(m, e.playerId) : null;
+        var color = (V.app.CAT_COLOR && V.app.CAT_COLOR[e.type]) || '#84909f';
+        feed.appendChild(el('article', { class: 'event-row' }, [
+          el('i', { style: 'background:' + color }),
+          el('div', {}, [
+            el('strong', {}, [
+              document.createTextNode(p ? p.name : CAT_LABEL[e.type] || e.type),
+              p ? el('span', { text: p.position }) : null
+            ]),
+            el('p', { text: eventDetail(e) })
+          ]),
+          el('time', { text: V.ui.fmtTime(e.ts) })
+        ]));
+      });
+    }
+
+    var foot = null;
+    if (evs.length > shown.length || ctx.logAll) {
+      foot = el('button', {
+        class: 'btn btn--sm btn--ghost',
+        text: ctx.logAll ? 'Δείξε λιγότερα' : 'Δείξε και τις ' + evs.length + ' ενέργειες',
+        onclick: function () { ctx.logAll = !ctx.logAll; V.app.render(); }
+      });
+    }
+
+    return el('aside', { class: 'side-panel' }, [
+      el('div', { class: 'panel-heading' }, [
+        el('div', {}, [
+          el('p', { class: 'eyebrow', text: 'MATCH LOG' }),
+          el('h2', { text: 'Ροή αγώνα' })
+        ]),
+        el('span', { text: evs.length + ' ενέργειες' })
+      ]),
+      feed,
+      foot ? el('div', { style: 'padding:10px 16px' }, [foot]) : null,
+      noteBox(ctx)
+    ]);
+  }
+
+  /* σύντομη περιγραφή για το λογόδιο */
+  function eventDetail(e) {
+    switch (e.type) {
+      case 'attack':
+        return V.label.attackKind(e.kind) + ' · ' + V.label.attackResult(e.kind, e.result);
+      case 'reception':
+        return 'Υποδοχή τύπος ' + e.target;
+      case 'pass':
+        return 'Πάσα → ' + V.label.passTarget(e.target) +
+          ((e.issues && e.issues.length)
+            ? ' (' + e.issues.map(function (i) { return V.label.passIssue(i); }).join(', ') + ')'
+            : ' (καθαρή)');
+      case 'serve':
+        return (e.stype === 'float' ? 'Float' : 'Άλμα') + ' · ' + V.label.serveResult(e.result) +
+          (e.zone ? ' · ζ.' + e.zone : '');
+      case 'defense':
+        return 'Άμυνα ' + V.label.defenseResult(e.target);
+      case 'note':
+        return e.text || '';
+      default:
+        return e.type;
+    }
+  }
+
+  /* =========================================================
+   * render — γήπεδο + λογόδιο
    * ========================================================= */
   function render(ctx) {
-    var m = ctx.match;
-    var wrap = el('div', { class: 'cscreen' }, [
-      scoreboard(ctx),
-      statusLine(ctx),
-      court(ctx),
+    var wrap = el('div', { class: 'workspace' });
+
+    var left = el('div', { class: 'court-column' }, [
+      courtBoard(ctx),
+      el('div', { class: 'court-hint' }, [
+        el('span', { class: 'court-hint__txt', text: hintFor(ctx) }),
+        ctx.flow ? el('button', {
+          class: 'btn btn--sm btn--ghost', text: '✕ Ακύρωση',
+          onclick: function () { ctx.flow = null; V.app.render(); }
+        }) : null
+      ]),
       controls(ctx)
     ]);
+
+    var setRow = el('div', { class: 'quick-actions' }, [
+      el('div', { class: 'seg seg--sm' }, numsOf(ctx).map(function (n) {
+        return el('button', {
+          class: 'seg__btn' + (ctx.set === n ? ' is-active' : ''),
+          text: 'Σετ ' + n,
+          onclick: function () { ctx.setSet(n); }
+        });
+      })),
+      el('button', {
+        onclick: function () { V.views.setup.lineupDialog(ctx.match, ctx.set); }
+      }, [el('span', { text: V.Store.hasLineup(ctx.match, ctx.set) ? 'Ενδέκη' : '＋ Ενδέκη' })]),
+      el('button', {
+        onclick: function () { startSetDialog(ctx); }
+      }, [el('span', { text: 'Ρύθμιση σετ' })])
+    ]);
+    left.appendChild(setRow);
+
+    wrap.appendChild(left);
+    wrap.appendChild(matchLog(ctx));
     return wrap;
+  }
+
+  function numsOf(ctx) {
+    var cur = V.Store.currentSet(ctx.match);
+    var out = [];
+    for (var i = 1; i <= cur; i++) out.push(i);
+    return out;
   }
 
   V.views = V.views || {};
   V.views.court = {
     render: render,
-    startSetDialog: startSetDialog
+    noteBox: noteBox,
+    startSetDialog: startSetDialog,
+    matchLog: matchLog,
+    courtBoard: courtBoard
   };
 })(window.V = window.V || {});

@@ -375,6 +375,66 @@
     return (t && t.sub) ? t.sub : '';
   }
 
+  /* =========================================================
+   * Χειροκίνητη καταχώρηση — οι 4 παλιές καρτέλες, σε παράθυρο.
+   * Χρήσιμες όταν δεν θέλεις να πατάς παίκτη στο γήπεδο
+   * (π.χ. για να διορθώσεις κάτι εκ των υστέρων).
+   * ========================================================= */
+  var ENTRY_TABS = [
+    { id: 'attack', label: 'Χτυπήματα' },
+    { id: 'reception', label: 'Υποδοχές' },
+    { id: 'pass', label: 'Πάσες' },
+    { id: 'serve', label: 'Σερβίς' }
+  ];
+
+  function entryDialog(ctx) {
+    var tab = ctx.tab === 'pass' || ctx.tab === 'serve' || ctx.tab === 'reception'
+      ? ctx.tab : 'attack';
+    var host = el('div', {});
+    var tabsBar = el('div', { class: 'seg seg--fill', style: 'margin-bottom:14px' });
+    var panel = el('div', {});
+
+    function panelFor(t) {
+      switch (t) {
+        case 'attack': return renderAttacks(ctx);
+        case 'reception': return renderReceptions(ctx);
+        case 'pass': return renderPasses(ctx);
+        case 'serve': return renderServes(ctx);
+        default: return el('div');
+      }
+    }
+
+    function draw() {
+      V.ui.clear(panel);
+      panel.appendChild(panelFor(tab));
+    }
+
+    ENTRY_TABS.forEach(function (t) {
+      tabsBar.appendChild(el('button', {
+        class: 'seg__btn' + (t.id === tab ? ' is-active' : ''),
+        text: t.label,
+        onclick: function () {
+          tab = t.id;
+          Array.prototype.forEach.call(tabsBar.children, function (b) { b.classList.remove('is-active'); });
+          this.classList.add('is-active');
+          draw();
+        }
+      }));
+    });
+
+    host.appendChild(tabsBar);
+    host.appendChild(panel);
+    draw();
+
+    var dlg = V.ui.modal({
+      title: 'Χειροκίνητη καταχώρηση',
+      size: 'lg',
+      body: host,
+      actions: [{ label: 'Τέλος', variant: 'primary' }]
+    });
+    return dlg;
+  }
+
   V.views = V.views || {};
   V.views.entry = {
     render: function (ctx) {
@@ -386,6 +446,7 @@
         default: return el('div');
       }
     },
+    entryDialog: entryDialog,
     eventLabel: eventLabel,
     undo: undo
   };

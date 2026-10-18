@@ -329,6 +329,7 @@
 
     body.appendChild(item('\uD83D\uDDC3', 'Ρόστερ', m.roster.length + ' παίκτες', function () { V.views.setup.rosterDialog(m); }));
     body.appendChild(item('\uD83C\uDDF0', 'Ενδέκη Σετ ' + ctx.set, 'Επιλογή 7 παικτών + swap MB/L', function () { V.views.setup.lineupDialog(m, ctx.set); }));
+    body.appendChild(item('\u270F\uFE0F', 'Χειροκίνητη καταχώρηση', 'Χτυπήματα · Υποδοχές · Πάσες · Σερβίς', function () { V.views.entry.entryDialog(ctx); }));
     body.appendChild(item('\uD83D\uDD04', 'Αλλαγή παίκτη', m.subs.length + ' αλλαγές', function () { subsDialog(ctx); }));
     body.appendChild(item('\uD83D\uDCCC', 'Νέο σετ', 'Συνέχεια στο επόμενο σετ', function () { nextSet(ctx); }));
     body.appendChild(item('\u270F', 'Στοιχεία αγώνα', 'Ομάδες, ημερομηνία, ημέρα', function () { metaDialog(ctx); }));

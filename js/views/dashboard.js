@@ -28,10 +28,13 @@
     ]);
   }
 
-  function section(title, icon, body, extra) {
-    return el('section', { class: 'card' }, [
+  function section(title, eyebrow, body, extra, wide) {
+    return el('section', { class: 'chart-card' + (wide ? ' wide' : '') }, [
       el('div', { class: 'card__head' }, [
-        el('h2', { class: 'card__title', text: (icon ? icon + ' ' : '') + title }),
+        el('div', {}, [
+          el('p', { class: 'eyebrow', text: eyebrow || title }),
+          el('h2', { class: 'card__title', text: title })
+        ]),
         extra || null
       ]),
       body
@@ -40,7 +43,7 @@
 
   /* ---------------- ΧΤΥΠΗΜΑΤΑ ---------------- */
   function attackSection(ctx, s) {
-    if (!s.total) return section('Χτυπήματα', '\uD83E\uDD3A', emptyState('Δεν υπάρχουν χτυπήματα σε αυτό το σετ.'));
+    if (!s.total) return section('Χτυπήματα', 'ATTACK OUTPUT', emptyState('Δεν υπάρχουν χτυπήματα σε αυτό το σετ.'));
 
     var head = CH.statCards([
       { value: String(s.kills), label: 'Πόντοι', accent: 'good' },
@@ -71,7 +74,7 @@
         return playerAttackDetail(p);
       }))
     ]);
-    return section('Χτυπήματα', '\uD83E\uDD3A', body);
+    return section('Χτυπήματα', 'ATTACK OUTPUT', body);
   }
 
   function playerAttackDetail(p) {
@@ -109,7 +112,7 @@
 
   /* ---------------- ΥΠΟΔΟΧΕΣ ---------------- */
   function receptionSection(ctx, s) {
-    if (!s.total) return section('Υποδοχές', '\uD83D\uDCD6', emptyState('Δεν υπάρχουν υποδοχές σε αυτό το σετ.'));
+    if (!s.total) return section('Υποδοχές', 'RECEPTION', emptyState('Δεν υπάρχουν υποδοχές σε αυτό το σετ.'));
 
     var body = el('div', {}, [
       CH.statCards([
@@ -134,7 +137,7 @@
         return playerReceptionDetail(p);
       }))
     ]);
-    return section('Υποδοχές', '\uD83D\uDCD6', body);
+    return section('Υποδοχές', 'RECEPTION', body);
   }
 
   function playerReceptionDetail(p) {
@@ -168,7 +171,7 @@
 
   /* ---------------- ΠΑΣΕΣ ---------------- */
   function passSection(ctx, s) {
-    if (!s.total) return section('Πάσες', '\uD83C\uDFAF', emptyState('Δεν υπάρχουν πάσες σε αυτό το σετ.'));
+    if (!s.total) return section('Πάσες', 'SETTER DISTRIBUTION', emptyState('Δεν υπάρχουν πάσες σε αυτό το σετ.'));
 
     var body = el('div', {}, [
       CH.statCards([
@@ -198,12 +201,12 @@
         return CH.meter('Πάσα σε ' + p.label, p.clean, p.total, p.cleanPct >= 80 ? 'good' : (p.cleanPct >= 50 ? 'default' : 'bad'));
       }))
     ]);
-    return section('Πάσες', '\uD83C\uDFAF', body);
+    return section('Πάσες', 'SETTER DISTRIBUTION', body);
   }
 
   /* ---------------- ΣΕΡΒΙΣ ---------------- */
   function serveSection(ctx, s) {
-    if (!s.total) return section('Σερβίς', '\uD83C\uDF00', emptyState('Δεν υπάρχουν σερβίς σε αυτό το σετ.'));
+    if (!s.total) return section('Σερβίς', 'SERVE PRESSURE', emptyState('Δεν υπάρχουν σερβίς σε αυτό το σετ.'));
 
     var body = el('div', {}, [
       CH.statCards([
@@ -248,12 +251,12 @@
         ]);
       }))
     ]);
-    return section('Σερβίς', '\uD83C\uDF00', body);
+    return section('Σερβίς', 'SERVE PRESSURE', body);
   }
 
   /* ---------------- ΑΜΥΝΑ ---------------- */
   function defenseSection(ctx, s) {
-    if (!s.total) return section('Άμυνα', '\uD83D\uDDE1', emptyState('Δεν υπάρχουν άμυνες σε αυτό το σετ.'));
+    if (!s.total) return section('Άμυνα', 'DEFENSE', emptyState('Δεν υπάρχουν άμυνες σε αυτό το σετ.'));
 
     var body = el('div', {}, [
       CH.statCards([
@@ -288,7 +291,7 @@
         ]);
       }))
     ]);
-    return section('Άμυνα', '\uD83D\uDDE1', body);
+    return section('Άμυνα', 'DEFENSE', body);
   }
 
   /* ---------------- ΣΗΜΕΙΩΣΕΙΣ ---------------- */
@@ -309,7 +312,7 @@
         })
       ]);
     }));
-    return section('Σημειώσεις (' + s.length + ')', '\uD83D\uDCDD', body);
+    return section('Σημειώσεις', 'NOTES · ' + s.length, body);
   }
 
   /* ---------------- συνοπτική εικόνα ---------------- */
@@ -342,7 +345,7 @@
           s.passes.players[0].total + ' πάσες') : null
       ].filter(Boolean))
     ]);
-    return section('Συνοπτικά', '\uD83D\uDCCA', body);
+    return section('Συνοπτικά', 'MATCH SUMMARY', body, null, 'wide');
   }
 
   function topLine(label, name, detail) {
@@ -389,7 +392,7 @@
       ]);
     }));
 
-    return section('Σετ ανά σετ', '\uD83D\uDCCA', el('div', {}, [
+    return section('Σετ ανά σετ', 'SET BY SET', el('div', {}, [
       rows.length ? CH.table(headers, rows) : emptyState('Δεν υπάρχουν σετ.'),
       lineups
     ]));
@@ -401,7 +404,7 @@
 function renderTimeline(ctx) {
     var m = ctx.match;
     var evs = m.events.slice().reverse();
-    if (!evs.length) return el('div', { class: 'card' }, [emptyState('Κανές καταχωρήσεις ακόμα.')]);
+    if (!evs.length) return el('div', { class: 'chart-card wide' }, [emptyState('Κανές καταχωρήσεις ακόμα.')]);
 
     var shown = evs.slice(0, ctx.logAll ? evs.length : LOG_PAGE);
 
@@ -437,9 +440,9 @@ function renderTimeline(ctx) {
       });
     }
 
-    return el('div', { class: 'card' }, [
+    return el('div', { class: 'chart-card wide' }, [
       el('div', { class: 'card__head' }, [
-        el('h2', { class: 'card__title', text: '\uD83D\uDCDC Λογόδιο (' + evs.length + ')' }),
+        el('h2', { class: 'card__title', text: 'Λογόδιο (' + evs.length + ')' }),
         el('button', { class: 'btn btn--ghost btn--sm', text: 'Undo τελευταίο', onclick: function () { V.views.entry.undo(ctx); } })
       ]),
       el('div', { class: 'log-list' }, shown.map(row)),
@@ -607,8 +610,21 @@ function renderTimeline(ctx) {
     render: function (ctx) {
       var m = ctx.match;
       var s = V.Stats.summary(m, ctx.statSet);
-      var wrap = el('div', { class: 'stats' }, [
+      var wrap = el('div', {}, [
+        el('div', { class: 'page-title' }, [
+          el('div', {}, [
+            el('p', { class: 'eyebrow', text: 'LIVE ANALYTICS' }),
+            el('h1', { text: 'Στατιστικά αγώνα' })
+          ]),
+          el('div', { class: 'summary-chips' }, [
+            el('span', {}, [el('b', { text: String(s.attacks.kills) }), document.createTextNode(' Πόντοι επίθεσης')]),
+            el('span', {}, [el('b', { text: String(s.serves.aces) }), document.createTextNode(' Άσοι')]),
+            el('span', {}, [el('b', { text: String(s.receptions.total) }), document.createTextNode(' Υποδοχές')]),
+            el('span', {}, [el('b', { text: String(s.defenses.total) }), document.createTextNode(' Αμύνες')])
+          ])
+        ]),
         setFilter(ctx),
+        el('div', { class: 'stats stats-grid' }, [
         overviewSection(m, s),
         attackSection(ctx, s.attacks),
         receptionSection(ctx, s.receptions),
@@ -616,7 +632,8 @@ function renderTimeline(ctx) {
         serveSection(ctx, s.serves),
         defenseSection(ctx, s.defenses),
         notesSection(ctx, s.notes),
-        setTableSection(m)
+          setTableSection(m)
+        ])
       ]);
       return wrap;
     },
