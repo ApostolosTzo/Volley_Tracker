@@ -503,8 +503,13 @@
       return el('button', {
         class: r.id === '3' ? 'good' : (r.id === '0' ? 'bad' : ''),
         onclick: function () {
-          /* άμυνα 0 = δεν διάσωσε τη μπάλα → πόντος στους αντιπάλους
-             (μόνο όταν το αυτόματο σκορ είναι ενεργό). */
+          /* άμυνα 0  = δεν τη διάσωσε → πόντος στους αντιπάλους, το rally τελειώνει.
+             άμυνα 1/2/3 = τη σώσαμε → συνεχίζουμε, μπαίνουμε σε ροή
+             «ετοιμάζει επίθεση»: το επόμενο πάτημα στο γήπεδο είναι ο χτυπητής.
+             Η ροή μπαίνει ΠΡΙΝ το addEvent, γιατί το addEvent κάνει render. */
+          var saved = r.id !== '0';
+          ctx.flow = saved ? { stage: 'pick-attacker' } : null;
+
           var ev = V.Store.addEvent(m.id, { set: ctx.set, type: 'defense', playerId: playerId, target: r.id });
           var side = scoreSideFor(m, ev);
           if (side) V.Store.awardPoint(m.id, ctx.set, side, 1);
@@ -513,7 +518,7 @@
           V.ui.buzz(side ? 18 : 12);
           V.ui.toast(
             name + ' · άμυνα ' + r.label +
-            (side === 'them' ? '  ·  +1 αντίπαλοι' : ''),
+            (side === 'them' ? '  ·  +1 αντίπαλοι' : (saved ? '  ·  σώθηκε' : '')),
             {
               tone: r.id === '3' ? 'good' : (side === 'them' ? 'bad' : 'neutral'),
               actionLabel: 'Undo', onAction: function () { V.views.entry.undo(ctx); }
