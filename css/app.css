@@ -1149,6 +1149,18 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .swapbox .sticky__label { margin: 0; }
 .swapbox__val { flex: 1; font-weight: 700; font-size: .84rem; }
 
+/* επιλογή περιστροφής (θέση του παίκτη σερβίς) */
+.rotsel { display: flex; flex-direction: column; gap: 5px; }
+.rotsel .seg__btn {
+  min-height: 38px; padding: 0;
+  font: 800 1rem var(--font-cond); letter-spacing: 0;
+}
+.rotsel .seg__btn small,
+.rotsel .seg__btn .seg__btn__sub {
+  display: block; font-size: .5rem; font-weight: 600;
+  letter-spacing: .02em; opacity: .7;
+}
+
 /* επιλογή ποιος ξεκινάει το σετ */
 .startpick { display: flex; flex-direction: column; gap: 5px; }
 .startpick .seg--fill button { min-height: 42px; font-size: .8rem; letter-spacing: .06em; }

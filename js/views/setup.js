@@ -435,8 +435,32 @@
     var used = {};
     for (var z = 1; z <= 6; z++) used[order[z]] = true;
 
+    /* Ποια περιστροφή είμαστε; Η αναφορά είναι η θέση του παίκτη σερβίς,
+       γιατί αυτός μένει στην ίδια θέση σε κάθε περιστροφή. */
+    var rotSeg = el('div', { class: 'seg seg--fill' });
+    [1, 2, 3, 4, 5, 6].forEach(function (z) {
+      rotSeg.appendChild(el('button', {
+        class: 'seg__btn' + (rotation === z ? ' is-active' : ''),
+        title: 'Ο παίκτης σερβίς στη ζώνη ' + z,
+        onclick: function () {
+          rotation = z;
+          opts.rotation = z;
+          Array.prototype.forEach.call(rotSeg.children, function (b) { b.classList.remove('is-active'); });
+          this.classList.add('is-active');
+          onRotation(z);
+          V.ui.buzz(8);
+          renderLineupEditor(box, opts);
+        }
+      }, [
+        el('span', { text: String(z) }),
+        el('span', { class: 'seg__btn__sub', text: z === 1 ? 'πίσω δεξιά' : 'S' })
+      ]));
+    });
+
     var server = opts.server === 'them' ? 'them' : 'us';
     var onServer = opts.onServer || function () { };
+    var rotation = Number(opts.rotation) || zoneOfS(order);
+    var onRotation = opts.onRotation || function () { };
 
     var missing = [];
     var court = el('div', { class: 'lc' });
@@ -511,6 +535,15 @@
       }))));
     }
 
+    box.appendChild(el('div', { class: 'rotsel sticky' }, [
+      el('span', { class: 'sticky__label', text: 'Ποια περιστροφή είμαστε; (θέση παίκτη σερβίς)' }),
+      rotSeg,
+      el('span', {
+        class: 'field__hint',
+        text: 'Ο παίκτης σερβίς μένει στην ίδια θέση σε κάθε περιστροφή, οπότε το νούμερό του λέει σε ποια είμαστε.'
+      })
+    ]));
+
     box.appendChild(court);
 
     /* Ποιος σερβίρει πρώτος. Με «Υποδοχή» ο S δεν είναι στη ζώνη 1
@@ -560,6 +593,13 @@
       }),
       roster.length ? null : el('span', { class: 'field__hint', text: 'Πρόσθεσε παίκτες για να ορίσεις ενδέκη.' })
     ]));
+  }
+
+  /* Σε ποια ζώνη είναι ο παίκτης σερβίς; Αυτό είναι το νούμερό της
+     περιστροφής, γιατί ο S παραμένει στην ίδια θέση σε κάθε περιστροφή. */
+  function zoneOfS(order) {
+    for (var z = 1; z <= 6; z++) if (order[z] === 'S') return z;
+    return 1;
   }
 
   /* ετικέτα θέσης στο γήπεδο: μόνο η θέση, χωρίς αρίθμη («1S», «3MB»).
@@ -639,12 +679,21 @@
     /* ποιος σερβίρει — το κρατάμε εδώ για να το σώσουμε μαζί με την ενδέκη */
     var startServer = V.Store.game(m, set).server === 'them' ? 'them' : 'us';
 
+    /* η τρέχουσα περιστροφή = η ζώνη του παίκτη σερβίς */
+    var rotation = zoneOfS(order);
+
     var opts = {
       roster: draft.roster,
       order: order,
       state: state,
       server: startServer,
+      rotation: rotation,
       onServer: function (v) { startServer = v; },
+      onRotation: function (z) {
+        rotation = z;
+        order = C.orderForSetterZone(z);
+        opts.order = order;
+      },
       onChange: function () { renderSw(); }
     };
     renderLineupEditor(box, opts);
@@ -698,10 +747,15 @@
           variant: 'primary',
           onClick: function () {
             V.Store.setLineup(m.id, set, state);
-            /* και «ποιος σερβίρει» μαζί — το enforceLiberoRule του
-               store κινεί αυτόματα τον MB αν χρειαστεί */
-            V.Store.setGame(m.id, set, { server: startServer });
-            V.ui.toast('Ενδέκη Σετ ' + set + ' αποθηκεύτηκε · ' +
+            /* Μαζί με την ενδέκη: η περιστροφή (θέση S) και το ποιος
+               σερβίρει. Το enforceLiberoRule του store κινεί τον MB
+               αυτόματα αν χρειαστεί. */
+            V.Store.setGame(m.id, set, {
+              order: C.orderForSetterZone(rotation),
+              server: startServer,
+              rotations: 0
+            });
+            V.ui.toast('Ενδέκη Σετ ' + set + ' · S στη ζώνη ' + rotation + ' · ' +
               (startServer === 'them' ? 'ξεκινάμε με υποδοχή' : 'ξεκινάμε με σερβίς'),
               { tone: 'good' });
           }
