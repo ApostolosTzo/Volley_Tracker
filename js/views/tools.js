@@ -112,15 +112,22 @@
     /* ειδική τιμή: να φύγει χωρίς να μπει κανείς */
     var NO_IN = '__none__';
 
+    /* Όχι μόνο το τρέχον σετ: πολλές φορές διορθώνουμε αλλαγή
+       παλιότερου σετ. */
+    var sets = [];
+    for (var n = 1; n <= V.Store.currentSet(m); n++) sets.push(n);
+    if (!sets.length) sets = [1];
+    if (sets.indexOf(ctx.set) === -1) sets.push(ctx.set);
+
     var setSel = V.ui.select(
-      [V.Store.currentSet(m)].filter(function (v, i, a) { return a.indexOf(v) === i; })
-        .map(function (n) { return { id: String(n), label: 'Σετ ' + n }; }),
+      sets.map(function (n) { return { id: String(n), label: 'Σετ ' + n }; }),
       String(ctx.set)
     );
     body.appendChild(V.ui.field('Σετ', setSel));
 
     var outSel = V.ui.select([], '');
     var inSel = V.ui.select([], '');
+    var warn = el('div', {});
 
     function refresh() {
       /* κράτα τις επιλογές του χρήστη όταν ξαναφτιάχνουμε τις λίστες */
@@ -150,12 +157,43 @@
         inSel.appendChild(el('option', { value: p.id, text: (p.number != null ? '#' + p.number + ' ' : '') + p.name + ' (' + p.position + ')' }));
       });
 
-      outSel.value = keepOut;
-      inSel.value = keepIn;
+      /* Το «Αποχώρησε» γεμίζει από την ενδέκη του σετ. Αν το σετ δεν έχει
+         ενδέκη, η λίστα μένει κενή — και ο χρήστης βλέπει ένα κενό
+         dropdown χωρίς εξήγηση. Το λέμε ρητά και δίνουμε αντιγραφή
+         από το πιο πρόσφατο σετ που έχει. */
+      V.ui.clear(warn);
+      var lastWith = 0;
+      for (var i = sets.length - 1; i >= 0; i--) {
+        if (V.Store.hasLineup(m, sets[i])) { lastWith = sets[i]; break; }
+      }
+      if (!V.Store.hasLineup(m, set)) {
+        warn.appendChild(el('div', { class: 'issues' }, [
+          el('span', { class: 'sticky__label', text: 'Προσοχή' }),
+          el('p', {
+            class: 'hint is-error',
+            text: 'Το Σετ ' + set + ' δεν έχει ενδέκη — δεν υπάρχουν παίκτες για αποχώρηση.'
+          }),
+          lastWith ? el('button', {
+            class: 'btn btn--sm',
+            text: '⧉ Αντιγραφή ενδέκης από το Σετ ' + lastWith,
+            onclick: function () {
+              V.Store.setLineup(m.id, set, V.Store.lineup(m, lastWith));
+              refresh();
+              V.ui.toast('Ενδέκη Σετ ' + lastWith + ' αντιγράφηκε στο Σετ ' + set, { tone: 'good' });
+            }
+          }) : null
+        ]));
+      } else if (lastWith && lastWith !== set) {
+        warn.appendChild(el('p', {
+          class: 'field__hint',
+          text: 'Το Σετ ' + set + ' έχει δική του ενδέκη.'
+        }));
+      }
     }
     setSel.addEventListener('change', refresh);
     refresh();
 
+    body.appendChild(warn);
     body.appendChild(el('div', { class: 'grid2' }, [
       V.ui.field('Αποχώρησε (από το γήπεδο)', outSel),
       V.ui.field('Μπήκε (από τον πάγκο)', inSel)
